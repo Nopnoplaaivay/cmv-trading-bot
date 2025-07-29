@@ -1,0 +1,503 @@
+# =====================================================
+# TRADING BOT - REPOSITORY STRUCTURE
+# =====================================================
+
+trading_bot/
+├── README.md
+├── requirements.txt
+├── docker-compose.yml
+├── Dockerfile
+├── .env.example
+├── .gitignore
+├── setup.py
+├── pyproject.toml
+│
+├── config/
+│   ├── __init__.py
+│   ├── settings.py              # Main configuration
+│   ├── database.py              # Database configuration
+│   ├── broker_config.py         # DNSE API configuration
+│   ├── trading_params.py        # Trading parameters
+│   └── logging_config.py        # Logging setup
+│
+├── src/
+│   ├── __init__.py
+│   │
+│   ├── core/                    # Core business logic
+│   │   ├── __init__.py
+│   │   ├── portfolio_manager.py # CEMV portfolio optimization
+│   │   ├── risk_manager.py      # Risk management
+│   │   ├── order_manager.py     # Order execution logic
+│   │   ├── position_manager.py  # Position tracking
+│   │   └── strategy_engine.py   # Strategy orchestrator
+│   │
+│   ├── data/                    # Data layer
+│   │   ├── __init__.py
+│   │   ├── market_data.py       # Market data handler
+│   │   ├── data_processor.py    # Data processing utilities
+│   │   ├── data_validator.py    # Data validation
+│   │   └── cache_manager.py     # Data caching
+│   │
+│   ├── brokers/                 # Broker integrations
+│   │   ├── __init__.py
+│   │   ├── base_broker.py       # Abstract broker interface
+│   │   ├── dnse_broker.py       # DNSE API implementation
+│   │   └── mock_broker.py       # Mock broker for testing
+│   │
+│   ├── database/                # Database layer
+│   │   ├── __init__.py
+│   │   ├── models.py            # SQLAlchemy models
+│   │   ├── repositories.py      # Data access layer
+│   │   ├── migrations/          # Database migrations
+│   │   │   ├── __init__.py
+│   │   │   └── versions/
+│   │   └── connection.py        # Database connection
+│   │
+│   ├── api/                     # REST API layer
+│   │   ├── __init__.py
+│   │   ├── main.py              # FastAPI main app
+│   │   ├── routers/             # API endpoints
+│   │   │   ├── __init__.py
+│   │   │   ├── portfolio.py     # Portfolio endpoints
+│   │   │   ├── orders.py        # Order endpoints
+│   │   │   ├── market_data.py   # Market data endpoints
+│   │   │   └── monitoring.py    # Monitoring endpoints
+│   │   ├── middleware/          # API middleware
+│   │   │   ├── __init__.py
+│   │   │   ├── auth.py          # Authentication
+│   │   │   └── rate_limit.py    # Rate limiting
+│   │   └── schemas/             # Pydantic schemas
+│   │       ├── __init__.py
+│   │       ├── portfolio.py
+│   │       ├── orders.py
+│   │       └── market_data.py
+│   │
+│   ├── services/                # Business services
+│   │   ├── __init__.py
+│   │   ├── portfolio_service.py # Portfolio operations
+│   │   ├── trading_service.py   # Trading operations
+│   │   ├── market_service.py    # Market data service
+│   │   ├── notification_service.py # Alerts & notifications
+│   │   └── scheduler_service.py # Job scheduling
+│   │
+│   ├── utils/                   # Utilities
+│   │   ├── __init__.py
+│   │   ├── logger.py            # Logging utilities
+│   │   ├── validators.py        # Validation functions
+│   │   ├── decorators.py        # Common decorators
+│   │   ├── constants.py         # System constants
+│   │   └── helpers.py           # Helper functions
+│   │
+│   └── exceptions/              # Custom exceptions
+│       ├── __init__.py
+│       ├── trading_exceptions.py
+│       ├── data_exceptions.py
+│       └── broker_exceptions.py
+│
+├── scripts/                     # Utility scripts
+│   ├── setup_database.py        # Database initialization
+│   ├── data_migration.py        # Data migration tools
+│   ├── backtest_runner.py       # Backtesting script
+│   └── health_check.py          # System health check
+│
+├── tests/                       # Test suite
+│   ├── __init__.py
+│   ├── conftest.py              # Pytest configuration
+│   ├── unit/                    # Unit tests
+│   │   ├── test_portfolio_manager.py
+│   │   ├── test_risk_manager.py
+│   │   ├── test_order_manager.py
+│   │   └── test_dnse_broker.py
+│   ├── integration/             # Integration tests
+│   │   ├── test_api_endpoints.py
+│   │   ├── test_database.py
+│   │   └── test_broker_integration.py
+│   └── fixtures/                # Test fixtures
+│       ├── sample_data.py
+│       └── mock_responses.py
+│
+├── docs/                        # Documentation
+│   ├── README.md
+│   ├── api_documentation.md
+│   ├── deployment_guide.md
+│   ├── user_manual.md
+│   └── architecture_diagram.png
+│
+├── monitoring/                  # Monitoring & observability
+│   ├── prometheus/              # Prometheus configuration
+│   │   └── prometheus.yml
+│   ├── grafana/                 # Grafana dashboards
+│   │   └── dashboards/
+│   └── alerts/                  # Alert configurations
+│       └── alert_rules.yml
+│
+├── deployment/                  # Deployment configurations
+│   ├── kubernetes/              # K8s manifests
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   └── configmap.yaml
+│   ├── terraform/               # Infrastructure as code
+│   │   ├── main.tf
+│   │   └── variables.tf
+│   └── docker/                  # Docker configurations
+│       └── docker-compose.prod.yml
+│
+└── notebooks/                   # Jupyter notebooks
+    ├── research/                # Research notebooks
+    │   ├── portfolio_analysis.ipynb
+    │   └── strategy_development.ipynb
+    └── reports/                 # Report generation
+        └── performance_report.ipynb
+
+# =====================================================
+# DATABASE DESIGN
+# =====================================================
+
+# PostgreSQL Database Schema
+
+CREATE DATABASE trading_bot;
+
+-- =====================================================
+-- MARKET DATA TABLES
+-- =====================================================
+
+-- Danh sách các tài sản giao dịch
+CREATE TABLE assets (
+    id SERIAL PRIMARY KEY,
+    symbol VARCHAR(10) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    exchange VARCHAR(20) NOT NULL,
+    sector VARCHAR(50),
+    industry VARCHAR(100),
+    market_cap BIGINT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Dữ liệu giá lịch sử (EOD data)
+CREATE TABLE market_data (
+    id SERIAL PRIMARY KEY,
+    asset_id INTEGER REFERENCES assets(id),
+    date DATE NOT NULL,
+    open_price DECIMAL(15,4) NOT NULL,
+    high_price DECIMAL(15,4) NOT NULL,
+    low_price DECIMAL(15,4) NOT NULL,
+    close_price DECIMAL(15,4) NOT NULL,
+    adjusted_close DECIMAL(15,4) NOT NULL,
+    volume BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(asset_id, date),
+    INDEX idx_asset_date (asset_id, date),
+    INDEX idx_date (date)
+);
+
+-- Dữ liệu intraday (real-time)
+CREATE TABLE intraday_data (
+    id SERIAL PRIMARY KEY,
+    asset_id INTEGER REFERENCES assets(id),
+    timestamp TIMESTAMP NOT NULL,
+    price DECIMAL(15,4) NOT NULL,
+    volume BIGINT NOT NULL,
+    bid_price DECIMAL(15,4),
+    ask_price DECIMAL(15,4),
+    bid_size INTEGER,
+    ask_size INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_asset_timestamp (asset_id, timestamp),
+    INDEX idx_timestamp (timestamp)
+);
+
+-- =====================================================
+-- PORTFOLIO MANAGEMENT TABLES
+-- =====================================================
+
+-- Portfolio configurations
+CREATE TABLE portfolios (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    initial_capital DECIMAL(20,2) NOT NULL,
+    current_value DECIMAL(20,2) NOT NULL DEFAULT 0,
+    strategy_type VARCHAR(50) NOT NULL DEFAULT 'CEMV',
+    risk_tolerance DECIMAL(5,4) DEFAULT 1.0,
+    max_position_size DECIMAL(5,4) DEFAULT 0.1,
+    rebalance_frequency VARCHAR(20) DEFAULT 'DAILY',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Portfolio weights (target allocations)
+CREATE TABLE portfolio_weights (
+    id SERIAL PRIMARY KEY,
+    portfolio_id INTEGER REFERENCES portfolios(id),
+    asset_id INTEGER REFERENCES assets(id),
+    date DATE NOT NULL,
+    target_weight DECIMAL(8,6) NOT NULL,
+    actual_weight DECIMAL(8,6),
+    expected_return DECIMAL(10,6),
+    risk_contribution DECIMAL(10,6),
+    algorithm VARCHAR(20) DEFAULT 'CEMV',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(portfolio_id, asset_id, date),
+    INDEX idx_portfolio_date (portfolio_id, date)
+);
+
+-- Portfolio metrics
+CREATE TABLE portfolio_metrics (
+    id SERIAL PRIMARY KEY,
+    portfolio_id INTEGER REFERENCES portfolios(id),
+    date DATE NOT NULL,
+    expected_return DECIMAL(10,6),
+    portfolio_risk DECIMAL(10,6),
+    sharpe_ratio DECIMAL(8,4),
+    entropy DECIMAL(8,4),
+    max_drawdown DECIMAL(8,4),
+    value_at_risk DECIMAL(8,4),
+    effective_assets INTEGER,
+    turnover DECIMAL(8,4),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(portfolio_id, date),
+    INDEX idx_portfolio_date (portfolio_id, date)
+);
+
+-- =====================================================
+-- TRADING TABLES
+-- =====================================================
+
+-- Orders table
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    portfolio_id INTEGER REFERENCES portfolios(id),
+    asset_id INTEGER REFERENCES assets(id),
+    order_id VARCHAR(50) UNIQUE, -- Broker order ID
+    order_type VARCHAR(20) NOT NULL, -- 'BUY', 'SELL'
+    order_style VARCHAR(20) NOT NULL, -- 'MARKET', 'LIMIT', 'STOP'
+    quantity INTEGER NOT NULL,
+    price DECIMAL(15,4),
+    stop_price DECIMAL(15,4),
+    time_in_force VARCHAR(10) DEFAULT 'DAY', -- 'DAY', 'GTC', 'IOC'
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING', -- 'PENDING', 'FILLED', 'CANCELLED', 'REJECTED'
+    filled_quantity INTEGER DEFAULT 0,
+    filled_price DECIMAL(15,4),
+    commission DECIMAL(10,2),
+    reason TEXT,
+    submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    filled_at TIMESTAMP,
+    cancelled_at TIMESTAMP,
+    INDEX idx_portfolio_status (portfolio_id, status),
+    INDEX idx_order_id (order_id),
+    INDEX idx_submitted_at (submitted_at)
+);
+
+-- Positions table (current holdings)
+CREATE TABLE positions (
+    id SERIAL PRIMARY KEY,
+    portfolio_id INTEGER REFERENCES portfolios(id),
+    asset_id INTEGER REFERENCES assets(id),
+    quantity INTEGER NOT NULL DEFAULT 0,
+    average_cost DECIMAL(15,4) NOT NULL DEFAULT 0,
+    market_value DECIMAL(20,2) NOT NULL DEFAULT 0,
+    unrealized_pnl DECIMAL(20,2) NOT NULL DEFAULT 0,
+    realized_pnl DECIMAL(20,2) NOT NULL DEFAULT 0,
+    last_price DECIMAL(15,4),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(portfolio_id, asset_id),
+    INDEX idx_portfolio_id (portfolio_id)
+);
+
+-- Transactions (trade executions)
+CREATE TABLE transactions (
+    id SERIAL PRIMARY KEY,
+    portfolio_id INTEGER REFERENCES portfolios(id),
+    asset_id INTEGER REFERENCES assets(id),
+    order_id INTEGER REFERENCES orders(id),
+    transaction_type VARCHAR(20) NOT NULL, -- 'BUY', 'SELL', 'DIVIDEND', 'SPLIT'
+    quantity INTEGER NOT NULL,
+    price DECIMAL(15,4) NOT NULL,
+    amount DECIMAL(20,2) NOT NULL, -- quantity * price
+    commission DECIMAL(10,2) NOT NULL DEFAULT 0,
+    fees DECIMAL(10,2) NOT NULL DEFAULT 0,
+    net_amount DECIMAL(20,2) NOT NULL, -- amount - commission - fees
+    executed_at TIMESTAMP NOT NULL,
+    settlement_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_portfolio_date (portfolio_id, executed_at),
+    INDEX idx_asset_date (asset_id, executed_at)
+);
+
+-- =====================================================
+-- RISK MANAGEMENT TABLES
+-- =====================================================
+
+-- Risk limits and constraints
+CREATE TABLE risk_limits (
+    id SERIAL PRIMARY KEY,
+    portfolio_id INTEGER REFERENCES portfolios(id),
+    limit_type VARCHAR(50) NOT NULL, -- 'MAX_POSITION', 'VAR_LIMIT', 'DRAWDOWN_LIMIT'
+    limit_value DECIMAL(10,6) NOT NULL,
+    current_value DECIMAL(10,6),
+    breach_threshold DECIMAL(10,6),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Risk events and alerts
+CREATE TABLE risk_events (
+    id SERIAL PRIMARY KEY,
+    portfolio_id INTEGER REFERENCES portfolios(id),
+    event_type VARCHAR(50) NOT NULL, -- 'LIMIT_BREACH', 'UNUSUAL_ACTIVITY', 'MARKET_STRESS'
+    severity VARCHAR(20) NOT NULL, -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
+    description TEXT NOT NULL,
+    current_value DECIMAL(10,6),
+    threshold_value DECIMAL(10,6),
+    action_taken VARCHAR(100),
+    is_resolved BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMP,
+    INDEX idx_portfolio_severity (portfolio_id, severity),
+    INDEX idx_created_at (created_at)
+);
+
+-- =====================================================
+-- SYSTEM TABLES
+-- =====================================================
+
+-- Trading sessions
+CREATE TABLE trading_sessions (
+    id SERIAL PRIMARY KEY,
+    session_date DATE NOT NULL UNIQUE,
+    market_open_time TIME NOT NULL,
+    market_close_time TIME NOT NULL,
+    is_trading_day BOOLEAN DEFAULT TRUE,
+    pre_market_start TIME,
+    after_hours_end TIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- System logs
+CREATE TABLE system_logs (
+    id SERIAL PRIMARY KEY,
+    level VARCHAR(10) NOT NULL, -- 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'
+    module VARCHAR(50) NOT NULL,
+    message TEXT NOT NULL,
+    details JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_level_created (level, created_at),
+    INDEX idx_module_created (module, created_at)
+);
+
+-- Application configuration
+CREATE TABLE app_config (
+    id SERIAL PRIMARY KEY,
+    key VARCHAR(100) NOT NULL UNIQUE,
+    value TEXT NOT NULL,
+    data_type VARCHAR(20) NOT NULL DEFAULT 'string', -- 'string', 'int', 'float', 'bool', 'json'
+    description TEXT,
+    is_sensitive BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =====================================================
+-- PERFORMANCE TRACKING
+-- =====================================================
+
+-- Daily portfolio performance
+CREATE TABLE performance_daily (
+    id SERIAL PRIMARY KEY,
+    portfolio_id INTEGER REFERENCES portfolios(id),
+    date DATE NOT NULL,
+    portfolio_value DECIMAL(20,2) NOT NULL,
+    cash_balance DECIMAL(20,2) NOT NULL,
+    invested_amount DECIMAL(20,2) NOT NULL,
+    daily_return DECIMAL(10,6),
+    cumulative_return DECIMAL(10,6),
+    benchmark_return DECIMAL(10,6),
+    alpha DECIMAL(8,4),
+    beta DECIMAL(8,4),
+    volatility DECIMAL(8,4),
+    max_drawdown DECIMAL(8,4),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(portfolio_id, date),
+    INDEX idx_portfolio_date (portfolio_id, date)
+);
+
+-- =====================================================
+-- INDEXES FOR PERFORMANCE
+-- =====================================================
+
+-- Market data indexes
+CREATE INDEX idx_market_data_asset_date ON market_data(asset_id, date DESC);
+CREATE INDEX idx_intraday_data_asset_time ON intraday_data(asset_id, timestamp DESC);
+
+-- Portfolio indexes
+CREATE INDEX idx_portfolio_weights_date ON portfolio_weights(date DESC);
+CREATE INDEX idx_orders_status_submitted ON orders(status, submitted_at DESC);
+CREATE INDEX idx_transactions_portfolio_executed ON transactions(portfolio_id, executed_at DESC);
+
+-- Performance indexes
+CREATE INDEX idx_performance_daily_date ON performance_daily(date DESC);
+CREATE INDEX idx_risk_events_severity ON risk_events(severity, created_at DESC);
+
+-- =====================================================
+-- VIEWS FOR COMMON QUERIES
+-- =====================================================
+
+-- Current portfolio positions with market values
+CREATE VIEW v_current_positions AS
+SELECT 
+    p.portfolio_id,
+    pf.name as portfolio_name,
+    a.symbol,
+    a.name as asset_name,
+    p.quantity,
+    p.average_cost,
+    p.market_value,
+    p.unrealized_pnl,
+    (p.market_value / pf.current_value) as current_weight,
+    p.updated_at
+FROM positions p
+JOIN portfolios pf ON p.portfolio_id = pf.id
+JOIN assets a ON p.asset_id = a.id
+WHERE p.quantity > 0 AND pf.is_active = TRUE;
+
+-- Latest portfolio weights
+CREATE VIEW v_latest_portfolio_weights AS
+SELECT 
+    pw.portfolio_id,
+    pf.name as portfolio_name,
+    a.symbol,
+    pw.target_weight,
+    pw.actual_weight,
+    pw.expected_return,
+    pw.date
+FROM portfolio_weights pw
+JOIN portfolios pf ON pw.portfolio_id = pf.id
+JOIN assets a ON pw.asset_id = a.id
+WHERE pw.date = (
+    SELECT MAX(date) 
+    FROM portfolio_weights pw2 
+    WHERE pw2.portfolio_id = pw.portfolio_id
+);
+
+-- Active orders summary
+CREATE VIEW v_active_orders AS
+SELECT 
+    o.id,
+    o.portfolio_id,
+    pf.name as portfolio_name,
+    a.symbol,
+    o.order_type,
+    o.order_style,
+    o.quantity,
+    o.price,
+    o.status,
+    o.submitted_at
+FROM orders o
+JOIN portfolios pf ON o.portfolio_id = pf.id
+JOIN assets a ON o.asset_id = a.id
+WHERE o.status IN ('PENDING', 'PARTIALLY_FILLED')
+ORDER BY o.submitted_at DESC;

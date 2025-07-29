@@ -1,0 +1,5 @@
+CREATE SCHEMA [BotAuth];
+GO
+
+CREATE SCHEMA [BotPortfolio];
+GO

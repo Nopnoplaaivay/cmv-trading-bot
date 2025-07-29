@@ -1,0 +1,20 @@
+# IDE
+.idea
+# venv
+venv
+
+# config
+*.env
+*.ini
+
+# cpython
+*__pycache__*
+
+# other
+tmp
+
+# data
+*.db
+
+# notebooks
+notebooks
