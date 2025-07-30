@@ -1,3 +1,3 @@
 from .optimized_weights import OptimizedWeights
-from .universe_top20 import UniverseTop20
+from .universe_top_monthly import UniverseTopMonthly
 from .process_tracking import ProcessTracking

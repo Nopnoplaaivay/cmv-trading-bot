@@ -47,12 +47,11 @@ class BaseMonthlyService:
         from_date = datetime.datetime.strptime(from_month_year, '%Y-%m')
         from_date_ = (from_date - relativedelta(months=15)).strftime(SQLServerConsts.DATE_FORMAT)
         from_date_str = from_date.strftime(SQLServerConsts.DATE_FORMAT)
-        data = cls.update_data(from_date=from_date_)
+        data = await cls.update_data(from_date=from_date_)
         data = data[data['date'] >= from_date_str].reset_index(drop=True)
         last_date = data['date'].iloc[-1]
         last_key_value = last_date[:7]
         data = data.drop(columns=['date'], errors='ignore')
-        data.to_csv("universe_top20.csv", index=False)
 
         with cls.repo.session_scope() as session:
             temp_table = f"#{cls.repo.query_builder.table}"
@@ -75,5 +74,5 @@ class BaseMonthlyService:
 
     @classmethod
     @abstractmethod
-    def update_data(cls, from_date) -> pd.DataFrame:
+    async def update_data(cls, from_date) -> pd.DataFrame:
         pass

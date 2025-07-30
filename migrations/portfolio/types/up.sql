@@ -13,7 +13,7 @@ CREATE TYPE [BotPortfolio].[optimizedWeights] AS TABLE(
     [date] VARCHAR(10) NOT NULL,
     [symbol] VARCHAR(10) NOT NULL,
     [initialWeight] DECIMAL(8,6) NOT NULL,
-    [normalizedWeight] DECIMAL(8,6),
+    [neutralizedWeight] DECIMAL(8,6),
     [algorithm] VARCHAR(50),
 
     [__createdAt__] VARCHAR(19),
@@ -21,11 +21,12 @@ CREATE TYPE [BotPortfolio].[optimizedWeights] AS TABLE(
 );
 GO
 
-CREATE TYPE [BotPortfolio].[universeTop20] AS TABLE(
+CREATE TYPE [BotPortfolio].[UniverseTopMonthly] AS TABLE(
     [id] INT,
     [year] INT NOT NULL,
     [month] INT NOT NULL,
     [symbol] VARCHAR(10) NOT NULL,
+    [exchangeCode] VARCHAR(10) NOT NULL,
     [sectorL2] VARCHAR(50),
     [cap] FLOAT,
     [averageLiquidity21] FLOAT,

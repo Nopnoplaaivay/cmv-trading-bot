@@ -3,16 +3,31 @@ import numpy as np
 
 from backend.common.consts import SQLServerConsts
 from backend.modules.base_monthly import BaseMonthlyService
-from backend.modules.portfolio.repositories import UniverseTop20Repo
-from backend.db.sessions import mart_session_scope
+from backend.modules.portfolio.repositories import UniverseTopMonthlyRepo
+from backend.db.sessions import mart_session_scope, lake_session_scope
 from backend.utils.data_utils import DataUtils
 from backend.utils.logger import LOGGER
 
-class UniverseTop20Service(BaseMonthlyService):
-    repo = UniverseTop20Repo
+class UniverseTopMonthlyService(BaseMonthlyService):
+    repo = UniverseTopMonthlyRepo
 
     @classmethod
-    def update_data(cls, from_date):
+    async def update_data(cls, from_date):
+        with lake_session_scope() as lake_session:
+            sql_query_0 = """
+                SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+                WITH UncommittedData AS (
+                    SELECT
+                        [ticker]
+                        ,[exchangeCode]
+                    FROM [LakeEod].[appFiinxCommon].[stocks]
+                )
+                SELECT * FROM UncommittedData
+                ORDER BY [ticker];
+            """
+            conn = lake_session.connection().connection
+            df_stock_0 = pd.read_sql_query(sql_query_0, conn)
         with mart_session_scope() as mart_session:
             sql_query_1 = f"""
                 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
@@ -84,6 +99,7 @@ class UniverseTop20Service(BaseMonthlyService):
             df_stock_2['netIncomeQoQ'] = df_stock_2.groupby(["ticker"], group_keys=False)["netIncomeQoQ"].ffill()
 
         df_stock = pd.merge(df_stock_1, df_stock_2, on=['date', 'ticker'], how="left")
+        df_stock = pd.merge(df_stock, df_stock_0, on=['ticker'], how="left")
         df_stock = pd.merge(df_stock, df_sector, on=['ticker'], how="left")
 
         df_stock['averageLiquidity21'] = df_stock.groupby('ticker')['totalMatchVolume'].transform(lambda x: x.rolling(21).mean())
@@ -112,7 +128,7 @@ class UniverseTop20Service(BaseMonthlyService):
         # Lọc và xử lý dữ liệu cần dùng
         df_filtered = df_monthly[
             [
-                'date', 'year', 'month', 'ticker', 'sectorL2', 'cap',
+                'date', 'year', 'month', 'ticker', 'exchangeCode', 'sectorL2', 'cap',
                 'averageLiquidity21', 'averageLiquidity63', 'averageLiquidity252',
                 'netIncomeQoQ', 'grossProfitQoQ', 'roe', 'eps', 'pe', 'pb'
             ]
@@ -131,56 +147,63 @@ class UniverseTop20Service(BaseMonthlyService):
         df_filtered['date'] = df_filtered['date'].dt.strftime(SQLServerConsts.DATE_FORMAT)
 
         """
-        FILTER 1: Lọc cơ bản về thanh khoản, vốn hóa và sàn giao dịch.
+        FILTER 1: Lọc cơ bản về thanh khoản, vốn hóa, ngành và sàn giao dịch.
         """
-        LOGGER.info("--- Bắt đầu Lớp lọc 1: Lọc Cơ bản ---")
-        LOGGER.info(f"Số lượng cổ phiếu ban đầu: {len(df_filtered)}")
 
-        initial_count = len(df_filtered)
         df_filtered = df_filtered.dropna(subset=['cap', 'grossProfitQoQ'])
-        LOGGER.info(f"Loại bỏ {initial_count - len(df_filtered)} mã do thiếu dữ liệu MarketCap/grossProfitQoQ/...")
 
-        min_market_cap = 1e13 # 10 nghìn tỷ VND
+        min_market_cap = 5e12 
         df_filtered = df_filtered[df_filtered['cap'] >= min_market_cap]
-        LOGGER.info(f"Số lượng cổ phiếu còn lại sau khi lọc Vốn hóa (> {min_market_cap} tỷ): {len(df_filtered)}")
 
-        min_avg_liquidity_63 = 1e5
+        min_avg_liquidity_63 = 1e4
         df_filtered = df_filtered[df_filtered['averageLiquidity63'] >= min_avg_liquidity_63]
-        LOGGER.info(f"Số lượng cổ phiếu còn lại sau khi lọc GTGD (> {min_avg_liquidity_63} tỷ/phiên): {len(df_filtered)}")
-        LOGGER.info("--- Kết thúc Lớp lọc 1 ---\n")
+
+        sectors = [
+            'Banks',
+            'Basic Resources',
+            'Chemicals',
+            'Construction & Materials',
+            'Financial Services',
+            'Food & Beverage',
+            'Industrial Goods & Services',
+            'Insurance',
+            'Oil & Gas',
+            'Personal & Household Goods',
+            'Real Estate',
+            'Telecommunications',
+            'Travel & Leisure',
+            'Utilities'
+        ]
+        df_filtered = df_filtered[df_filtered['sectorL2'].isin(sectors)]
+
+        exchanges = ['HOSE', 'HNX']
+        df_filtered = df_filtered[df_filtered['exchangeCode'].isin(exchanges)]
 
         """
         FILTER 2: Lọc theo tiêu chí Chất lượng.
         """
-        LOGGER.info("--- Bắt đầu Lớp lọc 2: Lọc Chất lượng ---")
-        initial_count = len(df_filtered)
 
         # Loại bỏ các mã thiếu dữ liệu cho lớp lọc này
         df_filtered = df_filtered.dropna(subset=['roe', 'pe'])
-        LOGGER.info(f"Loại bỏ {initial_count - len(df_filtered)} mã do thiếu dữ liệu ROE/PE.")
 
         # Lọc theo ROE và D/E
-        min_roe = 0.05
-        max_pe = 25
-        min_gross_profit_qoq = 0.05
+        min_roe = 0.01
+        max_pe = 30
+        min_gross_profit_qoq = 0.01
         df_filtered = df_filtered[
             (df_filtered['roe'] >= min_roe) &
             (df_filtered['pe'] <= max_pe) &
             (df_filtered['grossProfitQoQ'] >= min_gross_profit_qoq)
         ]
-        LOGGER.info(f"Số lượng cổ phiếu còn lại sau khi lọc (ROE >= {min_roe * 100}%, P/E <= {max_pe}): {len(df_filtered)}")
-        LOGGER.info("--- Kết thúc Lớp lọc 2 ---\n")
 
         """
         FILTER 3: Xếp hạng các cổ phiếu còn lại và chọn ra 20 mã tốt nhất.
         """
         ranking_factors = {
-            'roe': {'weight': 0.4, 'ascending': False},
-            'grossProfitQoQ': {'weight': 0.6, 'ascending': False}
+            'roe': {'weight': 0.5, 'ascending': False},
+            'grossProfitQoQ': {'weight': 0.5, 'ascending': False}
         }
 
-        LOGGER.info("--- Bắt đầu Lớp lọc 3: Xếp hạng & Lựa chọn ---")
-        LOGGER.info(f"Số lượng cổ phiếu đầu vào để xếp hạng: {len(df_filtered)}")
 
         df_ranked = df_filtered.copy()
         df_ranked['CompositeScore'] = 0
@@ -193,15 +216,15 @@ class UniverseTop20Service(BaseMonthlyService):
 
         final_df = pd.DataFrame()
         for year_month, group in df_ranked.groupby(['year', 'month']):
-            top_stocks = group.nlargest(20, 'CompositeScore', keep='first')
+            top_stocks = group.nlargest(50, 'CompositeScore', keep='first')
             final_df = pd.concat([final_df, top_stocks], ignore_index=True)
 
-        universe_top20_df = final_df[[
-            'date', 'year', 'month', 'symbol', 'sectorL2', 'cap',
+        universe_top50_df = final_df[[
+            'date', 'year', 'month', 'symbol', 'exchangeCode', 'sectorL2', 'cap',
             'averageLiquidity21', 'averageLiquidity63', 'averageLiquidity252',
             'grossProfitQoQ', 'roe', 'eps', 'pe', 'pb'
         ]]
 
-        LOGGER.info("--- DONE FILTERING UNIVERSE TOP 20 ---\n")
+        LOGGER.info("--- DONE FILTERING UNIVERSE TOP 50 ---\n")
 
-        return universe_top20_df
+        return universe_top50_df

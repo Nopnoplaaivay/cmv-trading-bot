@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, Float
 
 from backend.common.consts import SQLServerConsts
 from backend.modules.base.entities import Base
@@ -13,7 +13,8 @@ class OptimizedWeights(Base):
     __sqlServerType__ = f"[{SQLServerConsts.PORTFOLIO_SCHEMA}].[{__tablename__}]"
 
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True, index=True)
-    available_cash = Column(Integer, nullable=False)
-    securing_amount = Column(Integer, nullable=False)
-    purchasing_power = Column(Integer, nullable=False)
-    user_id = Column(String, ForeignKey(f"{SQLServerConsts.AUTH_SCHEMA}.[users].[id]"), nullable=False)
+    date = Column(String, nullable=False)
+    symbol = Column(String, nullable=False)
+    initialWeight = Column(Float, nullable=False)
+    neutralizedWeight = Column(Float, nullable=True)
+    algorithm = Column(String, nullable=True)

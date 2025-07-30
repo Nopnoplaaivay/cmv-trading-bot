@@ -47,7 +47,7 @@ class BaseDailyService:
     async def update_newest_data_from_date(cls, from_date: datetime.datetime, process_tracking: Dict):
         from_date_ = (from_date - relativedelta(months=15)).strftime(SQLServerConsts.DATE_FORMAT)
         from_date_str = from_date.strftime(SQLServerConsts.DATE_FORMAT)
-        data = cls.update_data(from_date=from_date_)
+        data = await cls.update_data(from_date=from_date_)
         data = data[data['date'] >= from_date_str].reset_index(drop=True)
         last_key_value = data['date'].iloc[-1]
 
@@ -56,14 +56,17 @@ class BaseDailyService:
             await cls.repo.upsert(
                 temp_table=temp_table,
                 records=data,
-                identity_columns=["date", "ticker"],
+                identity_columns=["date", "symbol"],
                 text_clauses={"__updatedAt__": TextSQL(SQLServerConsts.GMT_7_NOW_VARCHAR)},
             )
             await cls.process_tracking_repo.update(
-                record=ProcessTracking(**{
+                record={
                     ProcessTracking.id.name: process_tracking[ProcessTracking.id.name],
                     ProcessTracking.keyValue.name: last_key_value,
-                }),
+                },
+                identity_columns=[ProcessTracking.id.name],
+                returning=False,
+                text_clauses={"updatedAt": TextSQL(SQLServerConsts.GMT_7_NOW_VARCHAR)},
             )
             session.commit()
 

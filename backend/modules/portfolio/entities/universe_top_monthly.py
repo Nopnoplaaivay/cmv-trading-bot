@@ -5,8 +5,8 @@ from backend.modules.base.entities import Base
 
 
 
-class UniverseTop20(Base):
-    __tablename__ = 'universeTop20'
+class UniverseTopMonthly(Base):
+    __tablename__ = 'universeTopMonthly'
     __table_args__ = (
         {"schema": SQLServerConsts.PORTFOLIO_SCHEMA},
         )
@@ -16,6 +16,7 @@ class UniverseTop20(Base):
     year = Column(Integer, nullable=False)
     month = Column(Integer, nullable=False)
     symbol = Column(String, nullable=False)
+    exchangeCode = Column(String, nullable=True)
     sectorL2 = Column(String, nullable=True)
     cap = Column(Float, nullable=True)
     averageLiquidity21 = Column(Float, nullable=True)

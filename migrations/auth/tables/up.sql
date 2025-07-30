@@ -147,7 +147,7 @@ CREATE TABLE [BotPortfolio].[optimizedWeights] (
     [date] VARCHAR(10) NOT NULL,
     [symbol] VARCHAR(10) NOT NULL,
     [initialWeight] DECIMAL(8,6) NOT NULL,
-    [normalizedWeight] DECIMAL(8,6) NOT NULL,
+    [neutralizedWeight] DECIMAL(8,6) NOT NULL,
     [algorithm] VARCHAR(50) DEFAULT 'CMV',
 
     [__createdAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
@@ -169,7 +169,7 @@ CREATE TABLE [BotPortfolio].[personalWeights] (
 );
 GO
 
-CREATE TABLE [BotPortfolio].[universeTop200] (
+CREATE TABLE [BotPortfolio].[universeTopMonthly] (
     [id] INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
     [year] INT NOT NULL,
     [month] INT NOT NULL,
