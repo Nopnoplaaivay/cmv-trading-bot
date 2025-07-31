@@ -3,3 +3,6 @@ GO
 
 CREATE SCHEMA [BotPortfolio];
 GO
+
+CREATE SCHEMA [BotBrokers];
+GO

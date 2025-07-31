@@ -1,16 +1,17 @@
 import os
-import random
 import datetime
 
 class SQLServerConsts:
     AUTH_SCHEMA = "BotAuth"
     PORTFOLIO_SCHEMA = "BotPortfolio"
-    DATE_FORMAT = "%Y-%m-%d"
+    BROKERS_SCHEMA = "BotBrokers"
+
 
     TRADING_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     GMT_7_NOW = f"SWITCHOFFSET(SYSUTCDATETIME(), '+07:00')"
     GMT_7_NOW_VARCHAR = f"FORMAT(SWITCHOFFSET(SYSUTCDATETIME(), '+07:00'), 'yyyy-MM-dd HH:mm:ss')"
 
+    DATE_FORMAT = "%Y-%m-%d"
     START_TRADING_MONTH = '2024-01'
     START_TRADING_DAY = datetime.datetime.strptime(os.environ.get("START_TRADING_DAY", None), "%Y-%m-%d")
     TRADING_DAY_FORMAT = "%Y-%m-%d"
@@ -38,12 +39,8 @@ class MessageConsts:
     INVALID_OBJECT_ID = "Invalid object id"
     INVALID_INPUT = "Invalid input"
     INTERNAL_SERVER_ERROR = "Unknown internal server error"
+    TRADING_API_ERROR = "Trading API error"
 
 class DNSEConsts:
+    BASE_URL = "https://api.dnse.com.vn"
     BROKER = 'datafeed-lts-krx.dnse.com.vn'
-    PORT = 443
-    CLIENT_ID = f'python-json-mqtt-ws-sub-{random.randint(0, 1000)}'
-    FIRST_RECONNECT_DELAY = 1
-    RECONNECT_RATE = 2
-    MAX_RECONNECT_COUNT = 12
-    MAX_RECONNECT_DELAY = 60

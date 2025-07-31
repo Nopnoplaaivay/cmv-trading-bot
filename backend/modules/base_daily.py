@@ -43,6 +43,7 @@ class BaseDailyService:
             time.sleep(3)
         return True
 
+
     @classmethod
     async def update_newest_data_from_date(cls, from_date: datetime.datetime, process_tracking: Dict):
         from_date_ = (from_date - relativedelta(months=15)).strftime(SQLServerConsts.DATE_FORMAT)
