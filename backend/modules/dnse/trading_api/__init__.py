@@ -1,3 +1,3 @@
 from .orders_client import OrdersClient
-from .tokens_client import TokensClient
+from .auth_client import AuthClient
 from .users_client import UsersClient

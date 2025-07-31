@@ -30,7 +30,7 @@ class OTPType(Enum):
     EMAIL = "email"
 
 
-class TokensClient(BaseTradingClient):
+class AuthClient(BaseTradingClient):
     def __init__(
         self,
         account: Optional[str] = None,
@@ -47,7 +47,7 @@ class TokensClient(BaseTradingClient):
             RedisTokenStorage() if REDIS_AVAILABLE else SQLServerTokenStorage()
         )
 
-    async def get_jwt_token(self, account: str, password: str) -> bool:
+    async def login(self, account: str, password: str) -> bool:
         try:
             url = f"{self.config.base_url}/auth-service/login"
             data = {"username": account, "password": password}
@@ -98,7 +98,7 @@ class TokensClient(BaseTradingClient):
                 errors=str(e),
             )
 
-    async def get_new_trading_token(
+    async def get_trading_token(
         self, otp: str, otp_type: OTPType = OTPType.EMAIL.value
     ) -> bool:
         if not self.jwt_token:
@@ -178,26 +178,8 @@ class TokensClient(BaseTradingClient):
 
                 return True
             else:
-                # refresh token if it's not valid
-                LOGGER.warning(
-                    "Token is not valid or missing tradingToken/jwtToken, attempting to refresh"
-                )
-                if not token_data.tradingToken or not token_data.jwtToken:
-                    raise BaseExceptionResponse(
-                        http_code=401,
-                        status_code=401,
-                        message=MessageConsts.TRADING_API_ERROR,
-                        errors="Token data is incomplete",
-                    )
-                if not token_data.is_valid():
-                    LOGGER.warning("Token is expired, refreshing...")
-                    raise BaseExceptionResponse(
-                        http_code=401,
-                        status_code=401,
-                        message=MessageConsts.TRADING_API_ERROR,
-                        errors="Token is expired",
-                    )
-
+                LOGGER.warning("Token is expired")
+                return False
         except BaseExceptionResponse:
             raise
         except Exception as e:
