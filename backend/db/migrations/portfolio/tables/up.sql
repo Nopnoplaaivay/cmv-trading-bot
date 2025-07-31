@@ -68,7 +68,7 @@ CREATE TABLE [BotPortfolio].[orders] (
     [modifiedDate] VARCHAR(30),
     [leaveQuantity] INT,
     [canceledQuantity] INT,
-    [priceSecure] INT
+    [priceSecure] INT,
     [error] VARCHAR(255) DEFAULT NULL,
 
     [__createdAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
@@ -145,7 +145,7 @@ CREATE TABLE [BotPortfolio].[personalWeights] (
 );
 GO
 
-CREATE TABLE [BotPortfolio].[UniverseTopMonthly] (
+CREATE TABLE [BotPortfolio].[UniverseTopMonthly](
     [id] INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
     [year] INT NOT NULL,
     [month] INT NOT NULL,
