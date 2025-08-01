@@ -152,11 +152,4 @@ class BaseTradingClient:
         LOGGER.info(json.dumps(data, indent=4, ensure_ascii=False))
 
     def log_error(self, operation: str, error: Union[BaseExceptionResponse, Exception]):
-        if isinstance(error, BaseExceptionResponse):
-            LOGGER.error(f"{operation} failed: {error.message}")
-            if error.response_data:
-                LOGGER.error(
-                    json.dumps(error.response_data, indent=4, ensure_ascii=False)
-                )
-        else:
-            LOGGER.error(f"{operation} failed: {str(error)}")
+        LOGGER.error(f"{operation} failed: {str(error)}")

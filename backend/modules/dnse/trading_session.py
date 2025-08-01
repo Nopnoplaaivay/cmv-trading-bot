@@ -4,7 +4,7 @@ from backend.common.configs.dnse import TradingAPIConfig
 from backend.modules.dnse.trading_api import AuthClient, OrdersClient, UsersClient
 
 
-class DNSESession:
+class TradingSession:
     def __init__(self, config: Optional[TradingAPIConfig] = None):
         self.config = config or TradingAPIConfig()
         self.auth_client: Optional[AuthClient] = None
