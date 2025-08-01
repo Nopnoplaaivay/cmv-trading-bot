@@ -14,13 +14,14 @@ from typing import Optional, Dict, Union
 from enum import Enum
 
 
-from backend.common.consts import MessageConsts
-from backend.common.configs.dnse import AuthConfig
+from backend.common.consts import MessageConsts, SQLServerConsts
+from backend.common.configs.dnse import TradingAPIConfig
 from backend.common.responses.exceptions.base_exceptions import BaseExceptionResponse
 from backend.modules.dnse.entities import TradingTokens
 from backend.modules.base_trading_client import BaseTradingClient
 from backend.modules.dnse.storage import RedisTokenStorage, SQLServerTokenStorage, REDIS_AVAILABLE
 from backend.utils.logger import LOGGER
+from backend.utils.time_utils import TimeUtils
 
 
 
@@ -36,16 +37,13 @@ class AuthClient(BaseTradingClient):
         account: Optional[str] = None,
         jwt_token: Optional[str] = None,
         trading_token: Optional[str] = None,
-        config: Optional[AuthConfig] = None,
+        config: Optional[TradingAPIConfig] = None,
     ):
         super().__init__(config)
         self.account = account
         self.jwt_token = jwt_token
         self.trading_token = trading_token
-        # self.current_token_data: Optional[TradingTokens] = None
-        self.storage = (
-            RedisTokenStorage() if REDIS_AVAILABLE else SQLServerTokenStorage()
-        )
+        self.storage = (RedisTokenStorage() if REDIS_AVAILABLE else SQLServerTokenStorage())
 
     async def login(self, account: str, password: str) -> bool:
         try:
@@ -58,6 +56,25 @@ class AuthClient(BaseTradingClient):
             jwt_token = response_data.get("token")
             self.account = account
             self.jwt_token = jwt_token
+
+            current_time = TimeUtils.get_current_vn_time().strftime(SQLServerConsts.TRADING_TIME_FORMAT)
+
+            existing_token = None
+            try:
+                existing_token = await self.storage.load_token(account=account, broker="DNSE")
+            except:
+                pass
+            
+            token_entity = TradingTokens(
+                account=account,
+                jwtToken=jwt_token,
+                tradingToken=existing_token.tradingToken if existing_token and existing_token.is_trading_token_valid() else None,
+                broker="DNSE",
+                jwtCreatedAt=current_time,
+                tradingCreatedAt=existing_token.tradingCreatedAt if existing_token and existing_token.is_trading_token_valid() else None
+            )
+            
+            await self.storage.save_token(token_data=token_entity)
 
             LOGGER.info(f"Authentication successful for account: {account}")
             return True
@@ -129,11 +146,20 @@ class AuthClient(BaseTradingClient):
                 )
 
             self.trading_token = trading_token
+
+            current_time = TimeUtils.get_current_vn_time().strftime(SQLServerConsts.TRADING_TIME_FORMAT)
+
+            existing_token = await self.storage.load_token(account=self.account, broker="DNSE")
+            
             token_entity = TradingTokens(
                 account=self.account,
                 jwtToken=self.jwt_token,
                 tradingToken=trading_token,
                 broker="DNSE",
+                jwtCreatedAt=existing_token.jwtCreatedAt if existing_token else current_time,
+                tradingCreatedAt=current_time, 
+                createdAt=existing_token.createdAt if existing_token else current_time,
+                updatedAt=current_time
             )
 
             if self.account:
@@ -155,30 +181,33 @@ class AuthClient(BaseTradingClient):
         try:
             token_data = await self.storage.load_token(account=account, broker=broker)
 
-            # Check if token_data is None first
             if not token_data:
                 LOGGER.info(f"No token found for account {account} in broker {broker}")
                 return False
 
-            if (
-                token_data.tradingToken
-                and token_data.jwtToken
-                and token_data.is_valid()
-            ):
+            if (token_data.jwtToken and token_data.is_jwt_valid()):
+                self.account = account
                 self.jwt_token = token_data.jwtToken
-                self.trading_token = token_data.tradingToken
-
-                remaining = token_data.time_remaining()
-                if remaining:
-                    LOGGER.info(
-                        f"Token loaded successfully. Time remaining: {remaining}"
-                    )
+                
+                if token_data.tradingToken and token_data.is_trading_token_valid():
+                    self.trading_token = token_data.tradingToken
+                    
+                    jwt_remaining = token_data.jwt_time_remaining()
+                    trading_remaining = token_data.trading_time_remaining()
+                    
+                    LOGGER.info(f"Token loaded successfully.")
+                    LOGGER.info(f"JWT remaining: {jwt_remaining}")
+                    LOGGER.info(f"Trading token remaining: {trading_remaining}")
                 else:
-                    LOGGER.info("Token loaded successfully (no expiry)")
+                    LOGGER.info("JWT loaded, but trading token is expired or missing")
+                    self.trading_token = None
 
                 return True
             else:
-                LOGGER.warning("Token is expired")
+                if token_data.jwtToken and not token_data.is_jwt_valid():
+                    LOGGER.warning("JWT token is expired")
+                else:
+                    LOGGER.warning("No valid JWT token found")
                 return False
         except BaseExceptionResponse:
             raise

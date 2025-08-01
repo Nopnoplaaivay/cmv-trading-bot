@@ -23,7 +23,9 @@ class SQLServerTokenStorage(BaseTokenStorage):
                         TradingTokens.account.name: token_data.account,
                         TradingTokens.jwtToken.name: token_data.jwtToken,
                         TradingTokens.tradingToken.name: token_data.tradingToken,
-                        TradingTokens.broker.name: token_data.broker
+                        TradingTokens.broker.name: token_data.broker,
+                        TradingTokens.jwtCreatedAt.name: token_data.jwtCreatedAt,
+                        TradingTokens.tradingCreatedAt.name: token_data.tradingCreatedAt
                     },
                     returning=False
                 )
@@ -41,7 +43,10 @@ class SQLServerTokenStorage(BaseTokenStorage):
                 record={
                     TradingTokens.id.name: existed_token[TradingTokens.id.name],
                     TradingTokens.jwtToken.name: token_data.jwtToken,
-                    TradingTokens.tradingToken.name: token_data.tradingToken
+                    TradingTokens.tradingToken.name: token_data.tradingToken,
+                    TradingTokens.broker.name: token_data.broker,
+                    TradingTokens.jwtCreatedAt.name: token_data.jwtCreatedAt,
+                    TradingTokens.tradingCreatedAt.name: token_data.tradingCreatedAt,
                 },
                 identity_columns=[TradingTokens.id.name],
                 returning=False,

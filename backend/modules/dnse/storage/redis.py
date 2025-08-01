@@ -55,7 +55,10 @@ class RedisTokenStorage(BaseTokenStorage):
                 token_data_dict["updatedAt"] = current_time
                 LOGGER.info(f"Creating new token for account {token_data.account}")
 
-            conn.hset(token_key, mapping=token_data_dict)
+            # Filter out None values for Redis storage
+            redis_data = {k: v for k, v in token_data_dict.items() if v is not None}
+            
+            conn.hset(token_key, mapping=redis_data)
             LOGGER.info(
                 f"Token for account {token_data.account} saved to Redis successfully."
             )

@@ -15,11 +15,6 @@ class TradingAPIConfig:
 
 
 @dataclass
-class AuthConfig(TradingAPIConfig):
-    token_expiry_hours: int = 7
-
-
-@dataclass
 class MarketDataConfig:
     broker: str = DNSEConsts.BROKER
     port: int = 443

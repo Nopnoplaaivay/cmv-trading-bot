@@ -4,6 +4,8 @@ CREATE TABLE [BotBrokers].[tradingTokens](
 	[jwtToken] VARCHAR(2048) NOT NULL,
 	[tradingToken] VARCHAR(255),
 	[broker] VARCHAR(20) DEFAULT ('DNSE') NOT NULL,
+	[jwtCreatedAt] VARCHAR(19) DEFAULT (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
+	[tradingCreatedAt] VARCHAR(19) NULL,
 	[createdAt] VARCHAR(19) DEFAULT (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
 	[updatedAt] VARCHAR(19) DEFAULT (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
 	UNIQUE (tradingToken,broker)

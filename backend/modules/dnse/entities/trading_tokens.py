@@ -17,29 +17,82 @@ class TradingTokens(Base):
     jwtToken = Column(String, nullable=False)
     tradingToken = Column(String)
     broker = Column(String, nullable=False)
-    createdAt = Column(String)
-    updatedAt = Column(String)
+    
+    jwtCreatedAt = Column(String)      # When JWT was created
+    tradingCreatedAt = Column(String)  # When trading token was created
+    createdAt = Column(String)         # When record was first created
+    updatedAt = Column(String)         # When record was last updated
 
-    def is_valid(self) -> bool:
+    def is_jwt_valid(self) -> bool:
         try:
-            if not self.updatedAt:
+            if not self.jwtCreatedAt:
                 return False
-
-            expire_at = datetime.datetime.strptime(
-                self.updatedAt, SQLServerConsts.TRADING_TIME_FORMAT
-            ) + datetime.timedelta(hours=6)
-            return TimeUtils.get_current_vn_time() < expire_at
+            
+            jwt_expire_at = datetime.datetime.strptime(
+                self.jwtCreatedAt, SQLServerConsts.TRADING_TIME_FORMAT
+            ) + datetime.timedelta(hours=7)
+            
+            return TimeUtils.get_current_vn_time() < jwt_expire_at
+        except (ValueError, TypeError):
+            return False
+    
+    def is_trading_token_valid(self) -> bool:
+        try:
+            if not self.tradingCreatedAt or not self.tradingToken:
+                return False
+            
+            trading_expire_at = datetime.datetime.strptime(
+                self.tradingCreatedAt, SQLServerConsts.TRADING_TIME_FORMAT
+            ) + datetime.timedelta(hours=7)
+            
+            return TimeUtils.get_current_vn_time() < trading_expire_at
         except (ValueError, TypeError):
             return False
 
-    def time_remaining(self) -> Optional[datetime.timedelta]:
-        if not self.updatedAt:
+    def is_valid(self) -> bool:
+        return self.is_jwt_valid() and self.is_trading_token_valid()
+    
+    def is_partially_valid(self) -> bool:
+        return self.is_jwt_valid()
+
+    def jwt_time_remaining(self) -> Optional[datetime.timedelta]:
+        if not self.jwtCreatedAt:
             return None
-        expire_at = datetime.datetime.strptime(
-            self.updatedAt, SQLServerConsts.TRADING_TIME_FORMAT
-        ) + datetime.timedelta(hours=6)
-        remaining = expire_at - TimeUtils.get_current_vn_time()
-        return remaining if remaining > datetime.timedelta(0) else None
+        try:
+            jwt_expire_at = datetime.datetime.strptime(
+                self.jwtCreatedAt, SQLServerConsts.TRADING_TIME_FORMAT
+            ) + datetime.timedelta(hours=6)
+            
+            remaining = jwt_expire_at - TimeUtils.get_current_vn_time()
+            return remaining if remaining > datetime.timedelta(0) else None
+        except (ValueError, TypeError):
+            return None
+
+    def trading_time_remaining(self) -> Optional[datetime.timedelta]:
+        if not self.tradingCreatedAt:
+            return None
+        try:
+            trading_expire_at = datetime.datetime.strptime(
+                self.tradingCreatedAt, SQLServerConsts.TRADING_TIME_FORMAT
+            ) + datetime.timedelta(hours=6)
+            
+            remaining = trading_expire_at - TimeUtils.get_current_vn_time()
+            return remaining if remaining > datetime.timedelta(0) else None
+        except (ValueError, TypeError):
+            return None
+
+    def time_remaining(self) -> Optional[datetime.timedelta]:
+        jwt_remaining = self.jwt_time_remaining()
+        trading_remaining = self.trading_time_remaining()
+        
+        if jwt_remaining and trading_remaining:
+            return min(jwt_remaining, trading_remaining)
+        elif jwt_remaining:
+            return jwt_remaining
+        elif trading_remaining:
+            return trading_remaining
+        else:
+            return None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -48,6 +101,8 @@ class TradingTokens(Base):
             "jwtToken": self.jwtToken,
             "tradingToken": self.tradingToken,
             "broker": self.broker,
+            "jwtCreatedAt": self.jwtCreatedAt,
+            "tradingCreatedAt": self.tradingCreatedAt,
             "createdAt": self.createdAt,
             "updatedAt": self.updatedAt,
         }
@@ -60,6 +115,8 @@ class TradingTokens(Base):
             jwtToken=data.get("jwtToken"),
             tradingToken=data.get("tradingToken"),
             broker=data.get("broker"),
+            jwtCreatedAt=data.get("jwtCreatedAt"),
+            tradingCreatedAt=data.get("tradingCreatedAt"),
             createdAt=data.get("createdAt"),
             updatedAt=data.get("updatedAt"),
         )

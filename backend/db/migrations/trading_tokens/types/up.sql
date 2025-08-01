@@ -4,6 +4,8 @@ CREATE TYPE [BotBrokers].[tradingTokens] AS TABLE(
 	[jwtToken] VARCHAR(2048),
 	[tradingToken] VARCHAR(255),
 	[broker] VARCHAR(20),
+	[jwtCreatedAt] VARCHAR(19),
+	[tradingCreatedAt] VARCHAR(19),
 	[createdAt] VARCHAR(19),
 	[updatedAt] VARCHAR(19)
 )
