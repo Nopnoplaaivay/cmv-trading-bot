@@ -17,4 +17,6 @@ class OptimizedWeights(Base):
     symbol = Column(String, nullable=False)
     initialWeight = Column(Float, nullable=False)
     neutralizedWeight = Column(Float, nullable=True)
+    limitedWeight = Column(Float, nullable=True)
+    neutralizedLimitedWeight = Column(Float, nullable=True)
     algorithm = Column(String, nullable=True)

@@ -1,19 +1,11 @@
-CREATE TYPE [BotPortfolio].[__processTracking__] AS TABLE (
-	[id] BIGINT,
-	[createdAt] VARCHAR(19),
-	[updatedAt] VARCHAR(19),
-	[schemaName] VARCHAR(255),
-	[tableName] VARCHAR(255),
-	[keyName] VARCHAR(255),
-	[keyValue] VARCHAR(255)
-)
-
 CREATE TYPE [BotPortfolio].[optimizedWeights] AS TABLE(
     [id] INT,
     [date] VARCHAR(10) NOT NULL,
     [symbol] VARCHAR(10) NOT NULL,
     [initialWeight] DECIMAL(8,6) NOT NULL,
     [neutralizedWeight] DECIMAL(8,6),
+    [limitedWeight] DECIMAL(8,6),
+    [neutralizedLimitedWeight] DECIMAL(8,6),
     [algorithm] VARCHAR(50),
 
     [__createdAt__] VARCHAR(19),
@@ -42,3 +34,13 @@ CREATE TYPE [BotPortfolio].[UniverseTopMonthly] AS TABLE(
     [__updatedAt__] VARCHAR(19)
 );
 GO
+
+CREATE TYPE [BotPortfolio].[__processTracking__] AS TABLE (
+	[id] BIGINT,
+	[createdAt] VARCHAR(19),
+	[updatedAt] VARCHAR(19),
+	[schemaName] VARCHAR(255),
+	[tableName] VARCHAR(255),
+	[keyName] VARCHAR(255),
+	[keyValue] VARCHAR(255)
+)

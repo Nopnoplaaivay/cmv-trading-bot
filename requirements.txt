@@ -1,3 +1,4 @@
+aiohttp==3.10.11
 aioredis==2.0.1
 ccxt==4.4.94
 cvxpy==1.7.0
@@ -21,6 +22,7 @@ redis==5.2.1
 requests==2.32.3
 scipy==1.16.0
 seaborn==0.13.2
+schedule==1.2.2
 sko==0.5.7
 SQLAlchemy==1.4.26
 streamlit==1.44.1

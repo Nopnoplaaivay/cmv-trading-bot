@@ -47,6 +47,7 @@ async def main_with_session():
 
         if session.is_fully_authenticated():
             async with session.orders_client() as orders_client:
+                # Place an order
                 order = await orders_client.place_order(
                     account_no=accounts_info["default"]["id"],
                     side=OrderSide.BUY.value,
@@ -61,6 +62,7 @@ async def main_with_session():
                 else:
                     print("❌ Failed to place order")
 
+                # Get order book and order detail
                 order_books = await orders_client.get_order_book(
                     account_no=accounts_info["default"]["id"]
                 )
@@ -68,7 +70,6 @@ async def main_with_session():
                     print(f"✅ Order books retrieved successfully!")
                 else:
                     print("❌ Failed to retrieve order books")
-
 
                 order_detail = await orders_client.get_order_detail(
                     order_id=order["id"],
@@ -79,7 +80,7 @@ async def main_with_session():
                 else:
                     print("❌ Failed to retrieve order detail")
 
-
+                # Cancel an order
                 cancel_order = await orders_client.cancel_order(
                     order_id=order["id"],
                     account_no=accounts_info["default"]["id"]

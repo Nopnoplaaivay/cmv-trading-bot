@@ -124,6 +124,8 @@ CREATE TABLE [BotPortfolio].[optimizedWeights] (
     [symbol] VARCHAR(10) NOT NULL,
     [initialWeight] DECIMAL(8,6) NOT NULL,
     [neutralizedWeight] DECIMAL(8,6) NOT NULL,
+    [limitedWeight] DECIMAL(8,6) NULL,
+    [neutralizedLimitedWeight] DECIMAL(8,6) NULL,
     [algorithm] VARCHAR(50) DEFAULT 'CMV',
 
     [__createdAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,

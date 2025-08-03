@@ -1,2 +1,3 @@
-from backend.modules.portfolio.services.universe_top_monthly import UniverseTopMonthlyService
-from backend.modules.portfolio.services.optimized_weights import OptimizedWeightsService
+from .universe_top_monthly import UniverseTopMonthlyService
+from .optimized_weights import OptimizedWeightsService
+from .daily_portfolio_notification import DailyPortfolioNotificationService

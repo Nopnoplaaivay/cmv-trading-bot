@@ -21,9 +21,9 @@ class OptimizedWeightsService(BaseDailyService):
     @classmethod
     async def update_data(cls, from_date) -> pd.DataFrame:
         from_date_ = pd.to_datetime(from_date)
-        time_range = 63
+        time_range = 21
 
-        # Get price data for the last 15 months
+        # Get price data for the last 21 days
         with mart_session_scope() as mart_session:
             sql_query = f"""
                 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
@@ -73,7 +73,7 @@ class OptimizedWeightsService(BaseDailyService):
             # Filter columns (tickers) that are in the current month's universe
             available_assets = [asset for asset in assets if asset in window.columns]
             df_portfolio = window[available_assets].copy()
-            x_CEMV, x_CEMV_neutralized = PortfolioOptimizer.optimize(df_portfolio=df_portfolio)
+            x_CEMV, x_CEMV_neutralized, x_CEMV_limited, x_CEMV_neutralized_limit = PortfolioOptimizer.optimize(df_portfolio=df_portfolio)
 
             date = pd.to_datetime(end_of_period)
             for j in range(len(x_CEMV)):
@@ -82,6 +82,8 @@ class OptimizedWeightsService(BaseDailyService):
                     OptimizedWeights.symbol.name: df_portfolio.columns[j],
                     OptimizedWeights.initialWeight.name: x_CEMV[j],
                     OptimizedWeights.neutralizedWeight.name: x_CEMV_neutralized[j],
+                    OptimizedWeights.limitedWeight.name: x_CEMV_limited[j],
+                    OptimizedWeights.neutralizedLimitedWeight.name: x_CEMV_neutralized_limit[j],
                     OptimizedWeights.algorithm.name: "CEMV",
                 }
                 optimized_weights.append(record)
