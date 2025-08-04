@@ -5,7 +5,6 @@ class RegisterDTO(BaseDTO):
     account: str
     password: str
     confirm_password: str
-    role: str
 
 class LoginDTO(BaseDTO):
     account: str

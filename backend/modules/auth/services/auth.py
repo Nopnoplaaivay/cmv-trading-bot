@@ -13,11 +13,14 @@ from backend.modules.auth.dtos import RegisterDTO, LoginDTO, LogoutDTO, RefreshD
 from backend.modules.auth.types import JwtPayload, RefreshPayload
 from backend.modules.auth.entities import Users, Sessions
 from backend.modules.auth.repositories import UsersRepo, SessionsRepo
+from backend.modules.auth.cache import RedisBlacklist
 from backend.utils.jwt_utils import JWTUtils
 from backend.utils.time_utils import TimeUtils
 from backend.utils.logger import LOGGER
 
-black_list = TTLCache(maxsize=1000, ttl=24 * 60 * 60)
+# Initialize RedisBlacklist with TTLCache fallback
+# black_list = RedisBlacklist(maxsize=1000, ttl=24 * 60 * 60)
+
 
 class AuthService:
     @classmethod
@@ -37,15 +40,14 @@ class AuthService:
                 errors="Passwords do not match",
             )
         salted_password = f"{CommonConsts.SALT}{payload.password}"
-        user = await UsersRepo.insert(
+        await UsersRepo.insert(
             record={
                 Users.account.name: payload.account,
                 Users.password.name: hashlib.sha256(
                     salted_password.encode("utf-8")
                 ).hexdigest(),
-                Users.role.name: payload.role
             },
-            returning=True,
+            returning=False,
         )
 
         LOGGER.info(f"User {payload.account} has been created")
@@ -86,7 +88,7 @@ class AuthService:
         session = await SessionsRepo.insert(
             record={
                 Sessions.id.name: session_id,
-                Sessions.user_id.name: user[Users.id.name],
+                Sessions.userId.name: user[Users.id.name],
                 Sessions.signature.name: signature,
                 Sessions.expires_at.name: expires_at,
                 Sessions.role.name: user[Users.role.name],
@@ -109,21 +111,20 @@ class AuthService:
         access_token = JWTUtils.create_access_token(payload=at_payload)
         refresh_token = JWTUtils.create_refresh_token(payload=rt_payload)
 
-
-        return {"accessToken": access_token, "refreshToken": refresh_token, "accountId": account_id}
+        return {"accessToken": access_token, "refreshToken": refresh_token}
 
     @classmethod
     async def logout(cls, payload: LogoutDTO):
-        key = f"SESSION_BLACKLIST:{payload.userId}:{payload.sessionId}"
-        black_list[key] = payload.exp
+        key = f"{payload.userId}:{payload.sessionId}"
+        exp = payload.exp if payload.exp else 0
+        RedisBlacklist.set_session(key, exp)
         session = await SessionsRepo.get_by_condition(
             {Sessions.id.name: payload.sessionId}
         )
         if session:
             await SessionsRepo.delete({Sessions.id.name: payload.sessionId})
 
-        # show black list
-        LOGGER.info(f"Black list: {black_list}")
+        # Show blacklist status and storage info
         LOGGER.info(f"User {payload.userId} has been logged out")
 
     @classmethod
@@ -141,7 +142,7 @@ class AuthService:
         session = sessions[0]
         if session[Sessions.signature.name] != payload.signature:
             # Remove all sessions of the user
-            await SessionsRepo.delete({Sessions.user_id.name: payload.userId})
+            await SessionsRepo.delete({Sessions.userId.name: payload.userId})
             raise BaseExceptionResponse(
                 http_code=401,
                 status_code=401,
@@ -172,14 +173,18 @@ class AuthService:
             signature=new_signature,
         )
         access_token = JWTUtils.create_access_token(payload=access_token_payload)
-        refresh_token = JWTUtils.create_refresh_token(payload=refresh_token_payload)  # expires in = session.expies in
-        
+        refresh_token = JWTUtils.create_refresh_token(
+            payload=refresh_token_payload
+        )  # expires in = session.expies in
+
         return {"accessToken": access_token, "refreshToken": refresh_token}
 
-    @classmethod    
+    @classmethod
     async def verify_access_token(cls, access_token: str):
         try:
-            decoded_payload = JWTUtils.decode_token(token=access_token, secret_key=CommonConsts.AT_SECRET_KEY)
+            decoded_payload = JWTUtils.decode_token(
+                token=access_token, secret_key=CommonConsts.AT_SECRET_KEY
+            )
 
             session_id = decoded_payload.get("sessionId")
             user_id = decoded_payload.get("userId")
@@ -188,9 +193,9 @@ class AuthService:
             exp = decoded_payload.get("exp")
 
             # Check if the token is blacklisted
-            blacklist_key = f"SESSION_BLACKLIST:{user_id}:{session_id}"
-            if blacklist_key in black_list:
-                sessions = await SessionsRepo.delete({Sessions.user_id.name: user_id})
+            blacklist_key = f"{user_id}:{session_id}"
+            if RedisBlacklist.get_session(blacklist_key):
+                sessions = await SessionsRepo.delete({Sessions.userId.name: user_id})
                 raise BaseExceptionResponse(
                     http_code=401,
                     status_code=401,
@@ -199,7 +204,9 @@ class AuthService:
                 )
 
             # Validate the session associated with the token
-            sessions = await SessionsRepo.get_by_condition({Sessions.id.name: session_id})
+            sessions = await SessionsRepo.get_by_condition(
+                {Sessions.id.name: session_id}
+            )
             if not sessions:
                 raise BaseExceptionResponse(
                     http_code=401,
@@ -209,7 +216,7 @@ class AuthService:
                 )
 
             session = sessions[0]
-            if session[Sessions.user_id.name] != user_id:
+            if session[Sessions.userId.name] != user_id:
                 raise BaseExceptionResponse(
                     http_code=401,
                     status_code=401,
@@ -218,11 +225,7 @@ class AuthService:
                 )
 
             return JwtPayload(
-                sessionId=session_id,
-                userId=user_id,
-                role=role,
-                iat=iat,
-                exp=exp
+                sessionId=session_id, userId=user_id, role=role, iat=iat, exp=exp
             )
 
         except jwt.ExpiredSignatureError:
@@ -239,11 +242,13 @@ class AuthService:
                 message=MessageConsts.UNAUTHORIZED,
                 errors="Invalid token",
             )
-        
+
     @classmethod
     async def verify_refresh_token(cls, refresh_token: str):
         try:
-            decoded_payload = JWTUtils.decode_token(token=refresh_token, secret_key=CommonConsts.RT_SECRET_KEY)
+            decoded_payload = JWTUtils.decode_token(
+                token=refresh_token, secret_key=CommonConsts.RT_SECRET_KEY
+            )
 
             session_id = decoded_payload.get("sessionId")
             user_id = decoded_payload.get("userId")
@@ -251,8 +256,9 @@ class AuthService:
             iat = decoded_payload.get("iat")
             exp = decoded_payload.get("exp")
 
-            # Validate the session associated with the token
-            sessions = await SessionsRepo.get_by_condition({Sessions.id.name: session_id})
+            sessions = await SessionsRepo.get_by_condition(
+                {Sessions.id.name: session_id}
+            )
             if not sessions:
                 raise BaseExceptionResponse(
                     http_code=401,
@@ -262,7 +268,7 @@ class AuthService:
                 )
 
             session = sessions[0]
-            if session[Sessions.user_id.name] != user_id:
+            if session[Sessions.userId.name] != user_id:
                 raise BaseExceptionResponse(
                     http_code=401,
                     status_code=401,
@@ -272,11 +278,7 @@ class AuthService:
 
             # Return the decoded payload as a RefreshPayload object
             return RefreshPayload(
-                sessionId=session_id,
-                userId=user_id,
-                role=role,
-                iat=iat,
-                exp=exp
+                sessionId=session_id, userId=user_id, role=role, iat=iat, exp=exp
             )
 
         except jwt.ExpiredSignatureError:

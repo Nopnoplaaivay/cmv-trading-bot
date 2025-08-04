@@ -8,7 +8,8 @@ from backend.modules.base.entities import Base
 
 class Role(Enum):
     ADMIN = "admin"
-    CLIENT = "client"
+    FREE = "free"
+    PREMIUM = "premium"
 
 
 class Users(Base):
@@ -20,8 +21,8 @@ class Users(Base):
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True, index=True)
     account = Column(String, unique=True, index=True, nullable=False)
     password = Column(String, nullable=False)
-    role = Column(SQLAlchemyEnum(Role), default=Role.CLIENT)
-    mobile = Column(String, nullable=True)
-    email = Column(String, nullable=True)
+    role = Column(SQLAlchemyEnum(Role), nullable=False)
+    mobile = Column(String)
+    email = Column(String)
     sessions = relationship('Sessions', back_populates='user', cascade='all, delete-orphan')
     accounts = relationship('Accounts', back_populates='user', cascade='all, delete-orphan')
