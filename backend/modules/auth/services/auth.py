@@ -2,14 +2,18 @@ import os
 import hashlib
 import uuid
 import jwt
-from cachetools import TTLCache
 from datetime import timedelta
 from typing import Dict
 
 from backend.common.consts import MessageConsts, CommonConsts, SQLServerConsts
 from backend.modules.base.query_builder import TextSQL
 from backend.common.responses.exceptions.base_exceptions import BaseExceptionResponse
-from backend.modules.auth.dtos import RegisterDTO, LoginDTO, LogoutDTO, RefreshDTO
+from backend.modules.auth.dtos import (
+    RegisterDTO,
+    LoginDTO,
+    LogoutDTO,
+    RefreshDTO
+)
 from backend.modules.auth.types import JwtPayload, RefreshPayload
 from backend.modules.auth.entities import Users, Sessions
 from backend.modules.auth.repositories import UsersRepo, SessionsRepo

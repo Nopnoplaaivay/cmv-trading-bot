@@ -1,14 +1,17 @@
 from typing import Optional
 from backend.modules.base.dto import BaseDTO
 
+
 class RegisterDTO(BaseDTO):
     account: str
     password: str
     confirm_password: str
 
+
 class LoginDTO(BaseDTO):
     account: str
     password: str
+
 
 class LogoutDTO(BaseDTO):
     sessionId: str
@@ -17,12 +20,17 @@ class LogoutDTO(BaseDTO):
     iat: Optional[int] = None
     exp: Optional[int] = None
 
+
 class RefreshDTO(LogoutDTO):
     signature: str
+
 
 class LoginResDTO(BaseDTO):
     access_token: str
     refresh_token: str
 
+
 class RefreshResDTO(BaseDTO):
     access_token: str
+
+

@@ -6,9 +6,9 @@ from starlette.responses import JSONResponse
 from backend.common.consts import MessageConsts
 from backend.modules.base.dto import BaseDTO
 from backend.modules.auth.handlers import auth_router
+from backend.modules.admin.handlers import admin_router
 # from backend.modules.investors.handlers import investors_router
 # from backend.modules.orders.handlers import orders_router
-# from backend.modules.admin.handlers import admin_router
 
 
 class ErrorDetailModel(BaseDTO):
@@ -34,7 +34,7 @@ api_router = APIRouter(
 
 # api_router.include_router(investors_router, prefix="/investors-service", tags=["investors"])
 # api_router.include_router(orders_router, prefix="/orders-service", tags=["orders"])
-# api_router.include_router(admin_router, prefix="/admin-service", tags=["admin"])
+api_router.include_router(admin_router, prefix="/admin-service", tags=["admin"])
 api_router.include_router(auth_router, prefix="/auth-service", tags=["auth"])
 
 
