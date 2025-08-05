@@ -54,3 +54,35 @@ class UsersClient(BaseTradingClient):
                 message=MessageConsts.TRADING_API_ERROR,
                 errors=str(e)
             )
+        
+    async def get_account_balance(self, account_no: str) -> Optional[Dict]:
+        url = f"{self.config.base_url}/order-service/account-balances/{account_no}"
+        
+        try:
+            result = await self.make_request("GET", url)
+            self.log_success("Get account balance successfully", result)
+            return result
+        except Exception as e:
+            self.log_error("Failed to get account balance", e)
+            raise BaseExceptionResponse(
+                http_code=502,
+                status_code=502,
+                message=MessageConsts.TRADING_API_ERROR,
+                errors=str(e)
+            )
+        
+    async def get_account_deals(self, account_no: str) -> Optional[Dict]:
+        url = f"{self.config.base_url}/deal-service/deals?accountNo={account_no}"
+        
+        try:
+            result = await self.make_request("GET", url)
+            self.log_success("Get account deals successfully", result)
+            return result
+        except Exception as e:
+            self.log_error("Failed to get account deals", e)
+            raise BaseExceptionResponse(
+                http_code=502,
+                status_code=502,
+                message=MessageConsts.TRADING_API_ERROR,
+                errors=str(e)
+            )

@@ -1,3 +1,4 @@
+from .accounts import AccountsService
 from .universe_top_monthly import UniverseTopMonthlyService
 from .optimized_weights import OptimizedWeightsService
 from .daily_portfolio_notification import DailyPortfolioNotificationService

@@ -12,26 +12,37 @@ class PortfolioOptimizer:
     @classmethod
     def optimize(cls, df_portfolio: pd.DataFrame):
         returns_df = df_portfolio.pct_change(periods=2).fillna(0)
-        expected_returns_df = returns_df.ewm(span=21, adjust=False).mean()
-        Q = df_portfolio.cov().values
-        mu = expected_returns_df.mean().values
+        # expected_returns_df = returns_df.ewm(span=21, adjust=False).mean()
+
+        # def normalize(series):
+        #     min_val = np.min(series)
+        #     max_val = np.max(series)
+        #     norm_series = (series - min_val) / (max_val - min_val)
+        #     return norm_series
+
+        # df_portfolio_normalized = df_portfolio.apply(normalize, axis=0)
+
+        Q = returns_df.cov().values
+        mu = returns_df.mean().values
         lambda_ = 0.01
 
-        Q = np.nan_to_num(Q, nan=0.0, posinf=1e6, neginf=-1e6)
-        mu = np.nan_to_num(mu, nan=0.0, posinf=1e6, neginf=-1e6)
+        # Q = np.nan_to_num(Q, nan=0.0, posinf=1e6, neginf=-1e6)
+        # mu = np.nan_to_num(mu, nan=0.0, posinf=1e6, neginf=-1e6)
 
         x_CEMV, cvxpy_success = cls.solve_portfolio_cvxpy(mu, Q, lambda_)
 
-        if cvxpy_success:
-            cls.success_count += 1
-        else:
-            x_CEMV = cls.solve_portfolio_analytical(mu, Q, lambda_)
-            cls.fallback_count += 1
+        # if cvxpy_success:
+        #     cls.success_count += 1
+        # else:
+        #     x_CEMV = cls.solve_portfolio_analytical(mu, Q, lambda_)
+        #     cls.fallback_count += 1
 
-        x_CEMV = cls.normalize_weights_exact(x_CEMV)
+        x_CEMV = cls.solve_portfolio_analytical(mu, Q, lambda_)
+
+        # x_CEMV = cls.normalize_weights_exact(x_CEMV)
         x_CEMV_neutralized = cls.neutralize_weights_exact(x_CEMV)
-        x_CEMV_limited = cls.normalize_weights_limit(x_CEMV, max_weight=0.15)
-        x_CEMV_neutralized_limit = cls.neutralize_weights_limit(x_CEMV_limited, max_weight=0.15)
+        x_CEMV_limited = cls.normalize_weights_limit(x_CEMV, max_weight=0.1)
+        x_CEMV_neutralized_limit = cls.neutralize_weights_limit(x_CEMV_limited, max_weight=0.1)
 
         return x_CEMV, x_CEMV_neutralized, x_CEMV_limited, x_CEMV_neutralized_limit
 
@@ -47,15 +58,21 @@ class PortfolioOptimizer:
             constraints = [cp.sum(x) == 1, x >= 0]
 
             prob = cp.Problem(objective, constraints)
-            prob.solve(solver=cp.CLARABEL, verbose=False)
+            prob.solve()
 
-            if prob.status == cp.OPTIMAL and x.value is not None:
-                weights = x.value
-                weights = np.maximum(weights, 0)
-                weights = weights / np.sum(weights)
-                return weights, True
-            else:
-                return None, False
+            weights = x.value
+            if weights is None or np.any(np.isnan(weights)):
+                weights = np.ones(n_assets) / n_assets  # fallback
+                return weights, False
+            return weights, True
+
+            # if prob.status == cp.OPTIMAL and x.value is not None:
+            #     weights = x.value
+            #     weights = np.maximum(weights, 0)
+            #     weights = weights / np.sum(weights)
+            #     return weights, True
+            # else:
+            #     return None, False
 
         except Exception as e:
             return None, False
@@ -65,9 +82,10 @@ class PortfolioOptimizer:
         n_assets = len(mu)
 
         try:
-            Q_reg = Q + np.eye(n_assets) * 1e-8
+            # Q_reg = Q + np.eye(n_assets) * 1e-8
+            # A = pinv(Q_reg)
 
-            A = pinv(Q_reg)
+            A = pinv(Q)
             B = np.sum(A)
             C = A @ mu
             C_sum = np.sum(C)
@@ -78,13 +96,21 @@ class PortfolioOptimizer:
             nu = (2 * lambda_ * (C_sum - 1)) / B
             x = (1 / (2 * lambda_)) * A @ (mu - nu * np.ones(n_assets))
 
-            x = np.maximum(x, 0)
-            x_sum = np.sum(x)
 
-            if x_sum > 1e-12:
+            x = np.clip(x, 0, None)  # Remove negatives
+            x_sum = np.sum(x)
+            if x_sum > 0:
                 return x / x_sum
             else:
                 return np.ones(n_assets) / n_assets
+
+            # x = np.maximum(x, 0)
+            # x_sum = np.sum(x)
+
+            # if x_sum > 1e-12:
+            #     return x / x_sum
+            # else:
+            #     return np.ones(n_assets) / n_assets
 
         except Exception as e:
             return np.ones(n_assets) / n_assets

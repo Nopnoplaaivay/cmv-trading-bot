@@ -40,8 +40,14 @@ def test():
                 {
                     "date": date,  # Use converted datetime object
                     "symbol": symbol,
-                    "initialWeight": initial_weight,
-                    "neutralizedWeight": neutralized_weight,
+                    "initialWeight": (
+                        float(initial_weight) if initial_weight is not None else None
+                    ),
+                    "neutralizedWeight": (
+                        float(neutralized_weight)
+                        if neutralized_weight is not None
+                        else None
+                    ),
                 }
             )
 
@@ -71,10 +77,20 @@ def test():
             for _, row in df_month.iterrows():
                 date = row["date"]
                 symbol = row["symbol"]
-                result_df.loc[date, (symbol, "initialWeight")] = row["initialWeight"]
-                result_df.loc[date, (symbol, "neutralizedWeight")] = row[
-                    "neutralizedWeight"
-                ]
+                initial_weight = row["initialWeight"]
+                neutralized_weight = row["neutralizedWeight"]
+
+                # Ensure values are numeric (float) for Excel
+                result_df.loc[date, (symbol, "initialWeight")] = (
+                    float(initial_weight) if pd.notna(initial_weight) else None
+                )
+                result_df.loc[date, (symbol, "neutralizedWeight")] = (
+                    float(neutralized_weight) if pd.notna(neutralized_weight) else None
+                )
+
+            # Convert all columns to numeric, ensuring proper data types for Excel
+            for col in result_df.columns:
+                result_df[col] = pd.to_numeric(result_df[col], errors="coerce")
 
             # Round to 3 decimal places
             result_df = result_df.round(3)
@@ -88,7 +104,16 @@ def test():
         excel_filename = "tmp/portfolio_weights_all_months_2.xlsx"
         with pd.ExcelWriter(excel_filename, engine="openpyxl") as writer:
             for sheet_name, df in excel_data.items():
-                df.to_excel(writer, sheet_name=sheet_name)
+                # Ensure numeric data types before writing to Excel
+                df_copy = df.copy()
+
+                # Convert all data to float64 to ensure Excel recognizes as numbers
+                for col in df_copy.columns:
+                    df_copy[col] = pd.to_numeric(df_copy[col], errors="coerce").astype(
+                        "float64"
+                    )
+
+                df_copy.to_excel(writer, sheet_name=sheet_name)
 
         print(
             f"\n✅ Successfully exported to {excel_filename} with {len(excel_data)} sheets"

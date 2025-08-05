@@ -179,8 +179,7 @@ class AuthService:
         access_token = JWTUtils.create_access_token(payload=access_token_payload)
         refresh_token = JWTUtils.create_refresh_token(
             payload=refresh_token_payload
-        )  # expires in = session.expies in
-
+        )  
         return {"accessToken": access_token, "refreshToken": refresh_token}
 
     @classmethod

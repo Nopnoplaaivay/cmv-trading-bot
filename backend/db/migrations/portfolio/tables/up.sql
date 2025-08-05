@@ -1,51 +1,89 @@
 CREATE TABLE [BotPortfolio].[accounts] (
     [id] VARCHAR(36) PRIMARY KEY DEFAULT (LOWER(NEWID())),
     [userId] INT NOT NULL,
+    [name] NVARCHAR(50) NOT NULL,
+    [accountType] VARCHAR(20) NULL,
     [identificationCode] VARCHAR(20),
     [custodyCode] VARCHAR(20),
     [brokerName] VARCHAR(20),
     [brokerInvestorId] VARCHAR(20),
-    [brokerAccountId] VARCHAR(20),
+    [brokerAccountId] VARCHAR(20) UNIQUE,
     [__createdAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
     [__updatedAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
-    CONSTRAINT FK_user_accounts FOREIGN KEY (userId) REFERENCES [Auth].[users](id) ON DELETE CASCADE
+    CONSTRAINT FK_user_accounts FOREIGN KEY (userId) REFERENCES [BotAuth].[users](id) ON DELETE CASCADE,
+    CONSTRAINT UQ_brokerAccountId UNIQUE ([brokerAccountId])
 );
 GO
 
 CREATE TABLE [BotPortfolio].[balances] (
     [id] VARCHAR(36) PRIMARY KEY DEFAULT (LOWER(NEWID())),
-    [accountId] VARCHAR(36) NOT NULL,
-    [brokerAccountId] VARCHAR(20),
-    [totalCash] INT,
-    [availableCash] INT,
-    [termDeposit] INT,
-    [depositInterest] INT,
-    [stockValue] INT,
-    [marginableAmount] INT,
-    [nonMarginableAmount] INT,
-    [totalDebt] INT,
-    [netAssetValue] INT,
-    [receivingAmount] INT,
-    [secureAmount] INT,
-    [depositFeeAmount] INT,
-    [maxLoanLimit] INT,
-    [withdrawableCash] INT,
-    [collateralValue] INT,
-    [orderSecured] INT,
-    [purchasingPower] INT,
-    [cashDividendReceiving] INT,
+    [brokerAccountId] VARCHAR(20) NOT NULL,
+    [totalCash] BIGINT,
+    [availableCash] BIGINT,
+    [termDeposit] BIGINT,
+    [depositInterest] BIGINT,
+    [stockValue] BIGINT,
+    [marginableAmount] BIGINT,
+    [nonMarginableAmount] BIGINT,
+    [totalDebt] BIGINT,
+    [netAssetValue] BIGINT,
+    [receivingAmount] BIGINT,
+    [secureAmount] BIGINT,
+    [depositFeeAmount] BIGINT,
+    [maxLoanLimit] BIGINT,
+    [withdrawableCash] BIGINT,
+    [collateralValue] BIGINT,
+    [orderSecured] BIGINT,
+    [purchasingPower] BIGINT,
+    [cashDividendReceiving] BIGINT,
     [marginDebt] FLOAT,
     [marginRate] FLOAT,
-    [ppWithdraw] INT,
-    [blockMoney] INT,
+    [ppWithdraw] BIGINT,
+    [blockMoney] BIGINT,
     [totalRemainDebt] FLOAT,
     [totalUnrealizedDebt] FLOAT,
-    [blockedAmount] FLOAT,
-    [advancedAmount] INT,
     [advanceWithdrawnAmount] FLOAT,
+    [advancedAmount] BIGINT,
+    [blockedAmount] FLOAT,
     [__createdAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
     [__updatedAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
-    CONSTRAINT FK_account_balances FOREIGN KEY (accountId) REFERENCES [Portfolio].[accounts](id) ON DELETE CASCADE
+    CONSTRAINT FK_account_balances FOREIGN KEY (brokerAccountId) REFERENCES [BotPortfolio].[accounts](brokerAccountId) ON DELETE CASCADE
+);
+GO
+
+CREATE TABLE [BotPortfolio].[deals] (
+    [id] VARCHAR(36) PRIMARY KEY DEFAULT (LOWER(NEWID())),
+    [brokerAccountId] VARCHAR(20) NOT NULL,
+    [dealId] VARCHAR(10) NOT NULL,
+    [symbol] VARCHAR(10) NOT NULL,
+    [status] VARCHAR(10),
+    [side] VARCHAR(10),
+    [secure] FLOAT,
+    [accumulateQuantity] BIGINT NOT NULL,
+    [tradeQuantity] INT NOT NULL,
+    [closedQuantity] INT NOT NULL,
+    [t0ReceivingQuantity] INT,
+    [t1ReceivingQuantity] INT,
+    [t2ReceivingQuantity] INT,
+    [costPrice] FLOAT NOT NULL,
+    [averageCostPrice] FLOAT NOT NULL,
+    [marketPrice] FLOAT NOT NULL,
+    [realizedProfit] FLOAT NOT NULL,
+    [unrealizedProfit] FLOAT,
+    [breakEvenPrice] FLOAT,
+    [dividendReceivingQuantity] INT,
+    [dividendQuantity] INT,
+    [cashReceiving] FLOAT,
+    [rightReceivingCash] INT,
+    [t0ReceivingCash] FLOAT,
+    [t1ReceivingCash] FLOAT,
+    [t2ReceivingCash] FLOAT,
+    [createdDate] VARCHAR(30),
+    [modifiedDate] VARCHAR(30),
+
+    [__createdAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
+    [__updatedAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
+    CONSTRAINT FK_account_deals FOREIGN KEY (brokerAccountId) REFERENCES [BotPortfolio].[accounts](brokerAccountId) ON DELETE CASCADE
 );
 GO
 
@@ -73,48 +111,21 @@ CREATE TABLE [BotPortfolio].[orders] (
 
     [__createdAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
     [__updatedAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
-    CONSTRAINT FK_account_orders FOREIGN KEY (accountId) REFERENCES [Portfolio].[accounts](id) ON DELETE CASCADE
+    CONSTRAINT FK_account_orders FOREIGN KEY (accountId) REFERENCES [BotPortfolio].[accounts](id) ON DELETE CASCADE
 );
 GO
 
-CREATE TABLE [BotPortfolio].[deals] (
+CREATE TABLE [BotPortfolio].[personalWeights] (
     [id] VARCHAR(36) PRIMARY KEY DEFAULT (LOWER(NEWID())),
+    [date] VARCHAR(10) NOT NULL,
     [accountId] VARCHAR(36) NOT NULL,
-    [dealId] VARCHAR(36) NOT NULL,
     [symbol] VARCHAR(10) NOT NULL,
-    [brokerAccountId] VARCHAR(20),
-    [status] VARCHAR(10),
-    [side] VARCHAR(10),
-    [accumulateQuantity] INT NOT NULL,
-    [closedQuantity] INT NOT NULL,
-    [t0ReceivingQuantity] INT,
-    [t1ReceivingQuantity] INT,
-    [t2ReceivingQuantity] INT,
-    [costPrice] INT NOT NULL,
-    [averageCostPrice] INT NOT NULL,
-    [marketPrice] INT NOT NULL,
-    [realizedProfit] INT NOT NULL,
-    --     [realizedTotalTaxAndFee] INT,
-    --     [collectedBuyingFee] INT,
-    --     [collectedBuyingTax] INT,
-    --     [collectedStockTransferFee] INT,
-    --     [collectedInterestFee] INT,
-    --     [estimateRemainTaxAndFee] INT,
-    [unrealizedProfit] INT,
-    [breakEvenPrice] INT,
-    [dividendReceivingQuantity] INT,
-    [dividendQuantity] INT,
-    [cashReceiving] INT,
-    [rightReceivingCash] INT,
-    [t0ReceivingCash] INT,
-    [t1RecevingCash] INT,
-    [t2RecevingCash] INT,
-    [createdDate] VARCHAR(30),
-    [modifiedDate] VARCHAR(30),
+    [targetWeight] DECIMAL(8,6) NOT NULL,
+    [actualWeight] DECIMAL(8,6) NOT NULL,
 
     [__createdAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
     [__updatedAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
-    CONSTRAINT FK_account_deals FOREIGN KEY (accountId) REFERENCES [Portfolio].[accounts](id) ON DELETE CASCADE
+    CONSTRAINT FK_account_portfolio_weights FOREIGN KEY (accountId) REFERENCES [BotPortfolio].[accounts](id) ON DELETE CASCADE
 );
 GO
 
@@ -130,20 +141,6 @@ CREATE TABLE [BotPortfolio].[optimizedWeights] (
 
     [__createdAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
     [__updatedAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
-);
-GO
-
-CREATE TABLE [BotPortfolio].[personalWeights] (
-    [id] VARCHAR(36) PRIMARY KEY DEFAULT (LOWER(NEWID())),
-    [date] VARCHAR(10) NOT NULL,
-    [accountId] VARCHAR(36) NOT NULL,
-    [symbol] VARCHAR(10) NOT NULL,
-    [targetWeight] DECIMAL(8,6) NOT NULL,
-    [actualWeight] DECIMAL(8,6) NOT NULL,
-
-    [__createdAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
-    [__updatedAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
-    CONSTRAINT FK_account_portfolio_weights FOREIGN KEY (accountId) REFERENCES [Portfolio].[accounts](id) ON DELETE CASCADE
 );
 GO
 

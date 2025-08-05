@@ -106,8 +106,6 @@ class RedisTokenStorage(BaseTokenStorage):
             LOGGER.info(f"Token loaded for account {account} from Redis successfully")
             return token
 
-        except BaseExceptionResponse:
-            raise
         except Exception as e:
             LOGGER.error(f"Error loading token from Redis: {e}")
             raise BaseExceptionResponse(

@@ -12,8 +12,9 @@ class SQLServerConsts:
     GMT_7_NOW_VARCHAR = f"FORMAT(SWITCHOFFSET(SYSUTCDATETIME(), '+07:00'), 'yyyy-MM-dd HH:mm:ss')"
 
     DATE_FORMAT = "%Y-%m-%d"
-    START_TRADING_MONTH = '2024-01'
-    START_TRADING_DAY = datetime.datetime.strptime(os.environ.get("START_TRADING_DAY", None), "%Y-%m-%d")
+    START_TRADING_MONTH = '2025-01'
+    # START_TRADING_DAY = datetime.datetime.strptime(os.environ.get("START_TRADING_DAY", None), "%Y-%m-%d")
+    START_TRADING_DAY = datetime.datetime.strptime('2025-01-01', "%Y-%m-%d")
     TRADING_DAY_FORMAT = "%Y-%m-%d"
 
 class CommonConsts:

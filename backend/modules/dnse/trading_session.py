@@ -5,11 +5,12 @@ from backend.modules.dnse.trading_api import AuthClient, OrdersClient, UsersClie
 
 
 class TradingSession:
-    def __init__(self, config: Optional[TradingAPIConfig] = None):
+    def __init__(self, config: Optional[TradingAPIConfig] = None, account: Optional[str] = None):
         self.config = config or TradingAPIConfig()
         self.auth_client: Optional[AuthClient] = None
         self._jwt_token: Optional[str] = None
         self._trading_token: Optional[str] = None
+        self.account = account
 
     async def __aenter__(self):
         self.auth_client = AuthClient(config=self.config)
@@ -29,11 +30,11 @@ class TradingSession:
             self.auth_client.trading_token if self.auth_client else self._trading_token
         )
 
-    async def authenticate(self, account: str, password: str) -> bool:
-        if await self.auth_client.load_token(account=account):
+    async def authenticate(self, password: str) -> bool:
+        if await self.auth_client.load_token(account=self.account):
             return True
 
-        if await self.auth_client.login(account=account, password=password):
+        if await self.auth_client.login(account=self.account, password=password):
             return True
         return False
 
@@ -89,4 +90,3 @@ class TradingSession:
             yield client
         finally:
             await client.cleanup()
-

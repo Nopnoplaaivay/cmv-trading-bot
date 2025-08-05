@@ -9,9 +9,9 @@ if __name__ == "__main__":
         service = DailyPortfolioNotificationService()
 
         # Send test notification
-        # await service.send_test_notification()
+        await service.send_test_notification()
 
         # Or start the scheduler (uncomment to run continuously)
-        await service.run_scheduler()
+        # await service.run_scheduler()
 
     asyncio.run(main())

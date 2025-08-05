@@ -52,6 +52,7 @@ class OptimizedWeightsService(BaseDailyService):
         tmp_month = from_date_.month
         assets = []
         optimized_weights = []
+
         for i in range(time_range - 1, T):
             window = df_stock_pivoted.iloc[i - time_range + 1 : i + 1]
             end_of_period = window.index[-1]  # Use index instead of column 'date'

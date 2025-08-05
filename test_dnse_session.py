@@ -17,24 +17,27 @@ class OrderType(Enum):
 
 
 async def main_with_session():
-    async with TradingSession() as session:
-        username = os.getenv("TEST_DNSE_ACCOUNT")
-        password = os.getenv("TEST_DNSE_PASSWORD")
+    username = os.getenv("TEST_DNSE_ACCOUNT")
+    password = os.getenv("TEST_DNSE_PASSWORD")
+    async with TradingSession(account=username) as session:
 
-        if await session.authenticate(username, password):
+        if await session.authenticate(password=password):
 
             auth_status = session.get_auth_status()
             print(f"Auth status: {auth_status}")
 
-            if not session.trading_token:
-                await session.send_otp()
-                otp = input("Enter OTP: ")
-                await session.complete_auth(otp)
+            # if not session.trading_token:
+            #     await session.send_otp()
+            #     otp = input("Enter OTP: ")
+            #     await session.complete_auth(otp)
 
         if session.is_jwt_authenticated():
             async with session.users_client() as users_client:
                 users_info = await users_client.get_users_info()
                 accounts_info = await users_client.get_user_accounts()
+                deals_info = await users_client.get_account_deals(
+                    account_no="0001895009"
+                )
                 # buying_power = await users_client.get_buying_power(
                 #     account_no=accounts_info["default"]["id"],
                 #     symbol="OCB",
