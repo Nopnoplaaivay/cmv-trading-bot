@@ -11,6 +11,7 @@ class Deals(Base):
     __sqlServerType__ = f"[{SQLServerConsts.PORTFOLIO_SCHEMA}].[{__tablename__}]"
 
     id = Column(String(36), primary_key=True, nullable=False, index=True)
+    date = Column(String(10), nullable=False, index=True)
     brokerAccountId = Column(
         String(20),
         ForeignKey(f"{SQLServerConsts.PORTFOLIO_SCHEMA}.accounts.brokerAccountId"),

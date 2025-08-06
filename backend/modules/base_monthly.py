@@ -37,7 +37,6 @@ class BaseMonthlyService:
             else:
                 continue_trading_day = SQLServerConsts.START_TRADING_MONTH
             await cls.update_newest_data_from_month_year(from_month_year=continue_trading_day, process_tracking=tracking_record)
-            print("DONE")
             time.sleep(3)
         return True
 

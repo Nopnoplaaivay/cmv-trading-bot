@@ -28,4 +28,3 @@ class Accounts(Base):
     balances = relationship("Balances", back_populates="account", cascade="all, delete-orphan")
     orders = relationship("Orders", back_populates="account", cascade="all, delete-orphan")
     deals = relationship("Deals", back_populates="account", cascade="all, delete-orphan")
-    personal_weights = relationship("PersonalWeights", back_populates="account", cascade="all, delete-orphan")

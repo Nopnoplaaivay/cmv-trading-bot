@@ -39,7 +39,6 @@ class BaseDailyService:
             else:
                 continue_trading_day = SQLServerConsts.START_TRADING_DAY
             await cls.update_newest_data_from_date(from_date=continue_trading_day, process_tracking=tracking_record)
-            print("DONE")
             time.sleep(3)
         return True
 

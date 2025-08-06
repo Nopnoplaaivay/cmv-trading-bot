@@ -18,6 +18,7 @@ GO
 
 CREATE TABLE [BotPortfolio].[balances] (
     [id] VARCHAR(36) PRIMARY KEY DEFAULT (LOWER(NEWID())),
+    [date] VARCHAR(10) NOT NULL,
     [brokerAccountId] VARCHAR(20) NOT NULL,
     [totalCash] BIGINT,
     [availableCash] BIGINT,
@@ -54,6 +55,7 @@ GO
 
 CREATE TABLE [BotPortfolio].[deals] (
     [id] VARCHAR(36) PRIMARY KEY DEFAULT (LOWER(NEWID())),
+    [date] VARCHAR(10) NOT NULL,
     [brokerAccountId] VARCHAR(20) NOT NULL,
     [dealId] VARCHAR(10) NOT NULL,
     [symbol] VARCHAR(10) NOT NULL,

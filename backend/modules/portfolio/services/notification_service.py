@@ -27,7 +27,7 @@ class PortfolioNotificationService:
                 LOGGER.warning(
                     "No trading dates found. Cannot proceed with portfolio analysis."
                 )
-                return None
+                return False
             next_trading_date_str = next_trading_date.strftime(SQLServerConsts.DATE_FORMAT)
             last_trading_date_str = last_trading_date.strftime(SQLServerConsts.DATE_FORMAT)
 
@@ -39,7 +39,7 @@ class PortfolioNotificationService:
 
             if not notification_service.is_ready():
                 LOGGER.error("Notification service not available")
-                return
+                return False
 
             # Get portfolio data
             portfolio_data = await cls.portfolio_data_provider.get_portfolio_weights(
@@ -47,17 +47,14 @@ class PortfolioNotificationService:
             )
 
             if not portfolio_data:
-                await notify_error(
-                    "KHÔNG CÓ DỮ LIỆU DANH MỤC",
-                    f"Không tìm thấy dữ liệu danh mục cho ngày {last_trading_date.strftime('%d/%m/%Y')}",
-                )
-                return
+                return True
 
             # Notify about daily portfolio weights
             await notification_service.notify_daily_portfolio(
                 portfolio_data=portfolio_data
             )
             LOGGER.info("Daily portfolio notification sent successfully")
+            return True
 
         except Exception as e:
             LOGGER.error(f"Error in daily portfolio notification: {e}")
@@ -65,6 +62,7 @@ class PortfolioNotificationService:
                 "LỖI THÔNG BÁO DANH MỤC",
                 f"Có lỗi khi gửi thông báo danh mục hàng ngày: {str(e)}",
             )
+            return False
 
     @classmethod
     async def send_test_notification(cls, date: Optional[str] = None):

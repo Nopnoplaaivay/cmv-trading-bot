@@ -155,6 +155,22 @@ class TelegramNotifier:
         await self.send_message(message, MessageType.CHART, disable_notification=False)
 
 
+    async def send_system_alert(
+        self,
+        title: str,
+        description: str,
+        alert_type: MessageType = MessageType.WARNING,
+    ):
+        message = f"""
+            <b>{alert_type.value} {title}</b>
+
+            {description}
+
+            ⏰ <i>Thời gian: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</i>
+        """
+
+        await self.send_message(message, alert_type)
+
 
     async def test_connection(self) -> bool:
         try:
@@ -239,21 +255,7 @@ class TelegramNotifier:
     #     await self.send_message(message, MessageType.CHART)
 
 
-    # async def send_system_alert(
-    #     self,
-    #     title: str,
-    #     description: str,
-    #     alert_type: MessageType = MessageType.WARNING,
-    # ):
-    #     message = f"""
-    #         <b>{alert_type.value} {title}</b>
 
-    #         {description}
-
-    #         ⏰ <i>Thời gian: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</i>
-    #     """
-
-    #     await self.send_message(message, alert_type)
 
     # async def send_market_data_alert(
     #     self,

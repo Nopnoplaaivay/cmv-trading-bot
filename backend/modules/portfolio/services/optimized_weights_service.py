@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 
 from backend.common.consts import SQLServerConsts
-from backend.common.responses.exceptions import BaseExceptionResponse
 from backend.db.sessions import mart_session_scope
 from backend.modules.base_daily import BaseDailyService
 from backend.modules.portfolio.entities import UniverseTopMonthly, OptimizedWeights
@@ -11,8 +10,6 @@ from backend.modules.portfolio.repositories import (
     UniverseTopMonthlyRepo,
 )
 from backend.modules.portfolio.core import PortfolioOptimizer
-from backend.common.consts import MessageConsts
-from backend.utils.time_utils import TimeUtils
 
 
 class OptimizedWeightsService(BaseDailyService):

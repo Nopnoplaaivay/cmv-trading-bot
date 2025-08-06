@@ -16,6 +16,8 @@ from backend.modules.portfolio.repositories import (
     BalancesRepo,
     DealsRepo,
 )
+from backend.modules.portfolio.utils.balance_utils import BalanceUtils
+from backend.modules.portfolio.utils.deals_utils import DealsUtils
 from backend.utils.logger import LOGGER
 
 
@@ -144,7 +146,7 @@ class AccountsService:
                                     errors="Failed to fetch balance from DNSE API",
                                 )
 
-                            balance_data = cls.extract_balance_data(
+                            balance_data = BalanceUtils.extract_balance_data(
                                 raw_data=balance_dict
                             )
 
@@ -174,7 +176,7 @@ class AccountsService:
                                     errors="Failed to fetch deals from DNSE API",
                                 )
                             deals_data = [
-                                cls.extract_deal_data(raw_data=deal)
+                                DealsUtils.extract_deal_data(raw_data=deal)
                                 for deal in deals_raw["deals"]
                             ]
                             print(f"Deals data: {deals_data}")
@@ -207,73 +209,73 @@ class AccountsService:
                 errors=str(e),
             )
 
-    @classmethod
-    def extract_balance_data(cls, raw_data: Dict) -> Dict:
-        field_mapping = {
-            Balances.brokerAccountId.name: raw_data.get("investorAccountId"),
-            Balances.totalCash.name: raw_data.get("totalCash"),
-            Balances.availableCash.name: raw_data.get("availableCash"),
-            Balances.termDeposit.name: raw_data.get("termDeposit"),
-            Balances.depositInterest.name: raw_data.get("depositInterest"),
-            Balances.stockValue.name: raw_data.get("stockValue"),
-            Balances.marginableAmount.name: raw_data.get("marginableAmount"),
-            Balances.nonMarginableAmount.name: raw_data.get("nonMarginableAmount"),
-            Balances.totalDebt.name: raw_data.get("totalDebt"),
-            Balances.netAssetValue.name: raw_data.get("netAssetValue"),
-            Balances.receivingAmount.name: raw_data.get("receivingAmount"),
-            Balances.secureAmount.name: raw_data.get("secureAmount"),
-            Balances.depositFeeAmount.name: raw_data.get("depositFeeAmount"),
-            Balances.maxLoanLimit.name: raw_data.get("maxLoanLimit"),
-            Balances.withdrawableCash.name: raw_data.get("withdrawableCash"),
-            Balances.collateralValue.name: raw_data.get("collateralValue"),
-            Balances.orderSecured.name: raw_data.get("orderSecured"),
-            Balances.purchasingPower.name: raw_data.get("purchasingPower"),
-            Balances.cashDividendReceiving.name: raw_data.get("cashDividendReceiving"),
-            Balances.marginDebt.name: raw_data.get("marginDebt"),
-            Balances.marginRate.name: raw_data.get("marginRate"),
-            Balances.ppWithdraw.name: raw_data.get("ppWithdraw"),
-            Balances.blockMoney.name: raw_data.get("blockMoney"),
-            Balances.totalRemainDebt.name: raw_data.get("totalRemainDebt"),
-            Balances.totalUnrealizedDebt.name: raw_data.get("totalUnrealizedDebt"),
-            Balances.blockedAmount.name: raw_data.get("blockedAmount"),
-            Balances.advancedAmount.name: raw_data.get("advancedAmount"),
-            Balances.advanceWithdrawnAmount.name: raw_data.get(
-                "advanceWithdrawnAmount"
-            ),
-        }
+    # @classmethod
+    # def extract_balance_data(cls, raw_data: Dict) -> Dict:
+    #     field_mapping = {
+    #         Balances.brokerAccountId.name: raw_data.get("investorAccountId"),
+    #         Balances.totalCash.name: raw_data.get("totalCash"),
+    #         Balances.availableCash.name: raw_data.get("availableCash"),
+    #         Balances.termDeposit.name: raw_data.get("termDeposit"),
+    #         Balances.depositInterest.name: raw_data.get("depositInterest"),
+    #         Balances.stockValue.name: raw_data.get("stockValue"),
+    #         Balances.marginableAmount.name: raw_data.get("marginableAmount"),
+    #         Balances.nonMarginableAmount.name: raw_data.get("nonMarginableAmount"),
+    #         Balances.totalDebt.name: raw_data.get("totalDebt"),
+    #         Balances.netAssetValue.name: raw_data.get("netAssetValue"),
+    #         Balances.receivingAmount.name: raw_data.get("receivingAmount"),
+    #         Balances.secureAmount.name: raw_data.get("secureAmount"),
+    #         Balances.depositFeeAmount.name: raw_data.get("depositFeeAmount"),
+    #         Balances.maxLoanLimit.name: raw_data.get("maxLoanLimit"),
+    #         Balances.withdrawableCash.name: raw_data.get("withdrawableCash"),
+    #         Balances.collateralValue.name: raw_data.get("collateralValue"),
+    #         Balances.orderSecured.name: raw_data.get("orderSecured"),
+    #         Balances.purchasingPower.name: raw_data.get("purchasingPower"),
+    #         Balances.cashDividendReceiving.name: raw_data.get("cashDividendReceiving"),
+    #         Balances.marginDebt.name: raw_data.get("marginDebt"),
+    #         Balances.marginRate.name: raw_data.get("marginRate"),
+    #         Balances.ppWithdraw.name: raw_data.get("ppWithdraw"),
+    #         Balances.blockMoney.name: raw_data.get("blockMoney"),
+    #         Balances.totalRemainDebt.name: raw_data.get("totalRemainDebt"),
+    #         Balances.totalUnrealizedDebt.name: raw_data.get("totalUnrealizedDebt"),
+    #         Balances.blockedAmount.name: raw_data.get("blockedAmount"),
+    #         Balances.advancedAmount.name: raw_data.get("advancedAmount"),
+    #         Balances.advanceWithdrawnAmount.name: raw_data.get(
+    #             "advanceWithdrawnAmount"
+    #         ),
+    #     }
 
-        return {k: v for k, v in field_mapping.items() if v is not None}
+    #     return {k: v for k, v in field_mapping.items() if v is not None}
 
-    @classmethod
-    def extract_deal_data(cls, raw_data: Dict) -> Dict:
-        field_mapping = {
-            Deals.brokerAccountId.name: raw_data.get("accountNo"),
-            Deals.dealId.name: raw_data.get("id"),
-            Deals.symbol.name: raw_data.get("symbol"),
-            Deals.status.name: raw_data.get("status"),
-            Deals.side.name: raw_data.get("side"),
-            Deals.secure.name: raw_data.get("secure"),
-            Deals.accumulateQuantity.name: raw_data.get("accumulateQuantity"),
-            Deals.tradeQuantity.name: raw_data.get("tradeQuantity"),
-            Deals.closedQuantity.name: raw_data.get("closedQuantity"),
-            Deals.t0ReceivingQuantity.name: raw_data.get("t0ReceivingQuantity"),
-            Deals.t1ReceivingQuantity.name: raw_data.get("t1ReceivingQuantity"),
-            Deals.t2ReceivingQuantity.name: raw_data.get("t2ReceivingQuantity"),
-            Deals.costPrice.name: raw_data.get("costPrice"),
-            Deals.averageCostPrice.name: raw_data.get("averageCostPrice"),
-            Deals.marketPrice.name: raw_data.get("marketPrice"),
-            Deals.realizedProfit.name: raw_data.get("realizedProfit"),
-            Deals.unrealizedProfit.name: raw_data.get("unrealizedProfit"),
-            Deals.breakEvenPrice.name: raw_data.get("breakEvenPrice"),
-            Deals.dividendReceivingQuantity.name: raw_data.get("dividendReceivingQuantity"),
-            Deals.dividendQuantity.name: raw_data.get("dividendQuantity"),
-            Deals.cashReceiving.name: raw_data.get("cashReceiving"),
-            Deals.rightReceivingCash.name: raw_data.get("rightReceivingCash"),
-            Deals.t0ReceivingCash.name: raw_data.get("t0ReceivingCash"),
-            Deals.t1ReceivingCash.name: raw_data.get("t1ReceivingCash"),
-            Deals.t2ReceivingCash.name: raw_data.get("t2ReceivingCash"),
-            Deals.createdDate.name: raw_data.get("createdDate"),
-            Deals.modifiedDate.name: raw_data.get("modifiedDate"),
-        }
+    # @classmethod
+    # def extract_deal_data(cls, raw_data: Dict) -> Dict:
+    #     field_mapping = {
+    #         Deals.brokerAccountId.name: raw_data.get("accountNo"),
+    #         Deals.dealId.name: raw_data.get("id"),
+    #         Deals.symbol.name: raw_data.get("symbol"),
+    #         Deals.status.name: raw_data.get("status"),
+    #         Deals.side.name: raw_data.get("side"),
+    #         Deals.secure.name: raw_data.get("secure"),
+    #         Deals.accumulateQuantity.name: raw_data.get("accumulateQuantity"),
+    #         Deals.tradeQuantity.name: raw_data.get("tradeQuantity"),
+    #         Deals.closedQuantity.name: raw_data.get("closedQuantity"),
+    #         Deals.t0ReceivingQuantity.name: raw_data.get("t0ReceivingQuantity"),
+    #         Deals.t1ReceivingQuantity.name: raw_data.get("t1ReceivingQuantity"),
+    #         Deals.t2ReceivingQuantity.name: raw_data.get("t2ReceivingQuantity"),
+    #         Deals.costPrice.name: raw_data.get("costPrice"),
+    #         Deals.averageCostPrice.name: raw_data.get("averageCostPrice"),
+    #         Deals.marketPrice.name: raw_data.get("marketPrice"),
+    #         Deals.realizedProfit.name: raw_data.get("realizedProfit"),
+    #         Deals.unrealizedProfit.name: raw_data.get("unrealizedProfit"),
+    #         Deals.breakEvenPrice.name: raw_data.get("breakEvenPrice"),
+    #         Deals.dividendReceivingQuantity.name: raw_data.get("dividendReceivingQuantity"),
+    #         Deals.dividendQuantity.name: raw_data.get("dividendQuantity"),
+    #         Deals.cashReceiving.name: raw_data.get("cashReceiving"),
+    #         Deals.rightReceivingCash.name: raw_data.get("rightReceivingCash"),
+    #         Deals.t0ReceivingCash.name: raw_data.get("t0ReceivingCash"),
+    #         Deals.t1ReceivingCash.name: raw_data.get("t1ReceivingCash"),
+    #         Deals.t2ReceivingCash.name: raw_data.get("t2ReceivingCash"),
+    #         Deals.createdDate.name: raw_data.get("createdDate"),
+    #         Deals.modifiedDate.name: raw_data.get("modifiedDate"),
+    #     }
 
-        return {k: v for k, v in field_mapping.items() if v is not None}
+    #     return {k: v for k, v in field_mapping.items() if v is not None}

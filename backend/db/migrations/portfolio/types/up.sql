@@ -16,6 +16,7 @@ GO
 
 CREATE TYPE [BotPortfolio].[balances] AS TABLE(
     [id] VARCHAR(36),
+    [date] VARCHAR(10) NOT NULL,
     [brokerAccountId] VARCHAR(20) NOT NULL,
     [totalCash] BIGINT,
     [availableCash] BIGINT,
@@ -78,6 +79,7 @@ GO
 CREATE TYPE [BotPortfolio].[deals] AS TABLE(
     [id] VARCHAR(36),
     [brokerAccountId] VARCHAR(20),
+    [date] VARCHAR(10),
     [dealId] VARCHAR(10) NOT NULL,
     [symbol] VARCHAR(10) NOT NULL,
     [status] VARCHAR(10),

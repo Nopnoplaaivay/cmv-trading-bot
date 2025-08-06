@@ -91,4 +91,3 @@ async def send_portfolio_report_notification(
             errors=f"Error sending notification: {str(e)}",
         )
         return JSONResponse(status_code=response.http_code, content=response.to_dict())
-
