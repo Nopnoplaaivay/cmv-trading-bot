@@ -109,18 +109,6 @@ CREATE TYPE [BotPortfolio].[deals] AS TABLE(
 );
 GO
 
-CREATE TYPE [BotPortfolio].[personalWeights] AS TABLE(
-    [id] VARCHAR(36),
-    [date] VARCHAR(10) NOT NULL,
-    [accountId] VARCHAR(36) NOT NULL,
-    [symbol] VARCHAR(10) NOT NULL,
-    [targetWeight] DECIMAL(8,6) NOT NULL,
-    [actualWeight] DECIMAL(8,6) NOT NULL,
-    [__createdAt__] VARCHAR(19),
-    [__updatedAt__] VARCHAR(19)
-);
-GO
-
 CREATE TYPE [BotPortfolio].[optimizedWeights] AS TABLE(
     [id] INT,
     [date] VARCHAR(10) NOT NULL,

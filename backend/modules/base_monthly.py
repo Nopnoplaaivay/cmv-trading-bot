@@ -45,7 +45,7 @@ class BaseMonthlyService:
     @abstractmethod
     async def update_newest_data_from_month_year(cls, from_month_year: str, process_tracking: Dict):
         from_date = datetime.datetime.strptime(from_month_year, '%Y-%m')
-        from_date_ = (from_date - relativedelta(months=15)).strftime(SQLServerConsts.DATE_FORMAT)
+        from_date_ = (from_date - relativedelta(months=6)).strftime(SQLServerConsts.DATE_FORMAT)
         from_date_str = from_date.strftime(SQLServerConsts.DATE_FORMAT)
         data = await cls.update_data(from_date=from_date_)
         data = data[data['date'] >= from_date_str].reset_index(drop=True)

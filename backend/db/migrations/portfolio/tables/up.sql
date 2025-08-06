@@ -116,20 +116,6 @@ CREATE TABLE [BotPortfolio].[orders] (
 );
 GO
 
-CREATE TABLE [BotPortfolio].[personalWeights] (
-    [id] VARCHAR(36) PRIMARY KEY DEFAULT (LOWER(NEWID())),
-    [date] VARCHAR(10) NOT NULL,
-    [accountId] VARCHAR(36) NOT NULL,
-    [symbol] VARCHAR(10) NOT NULL,
-    [targetWeight] DECIMAL(8,6) NOT NULL,
-    [actualWeight] DECIMAL(8,6) NOT NULL,
-
-    [__createdAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
-    [__updatedAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
-    CONSTRAINT FK_account_portfolio_weights FOREIGN KEY (accountId) REFERENCES [BotPortfolio].[accounts](id) ON DELETE CASCADE
-);
-GO
-
 CREATE TABLE [BotPortfolio].[optimizedWeights] (
     [id] INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
     [date] VARCHAR(10) NOT NULL,
