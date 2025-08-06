@@ -25,3 +25,13 @@ class AccountsRepo(BaseRepo[Dict]):
             session.commit()
 
         return records if records else None
+    
+    @classmethod
+    async def get_by_broker_account_id(cls, broker_account_id: str) -> Optional[Dict]:
+        """Get account by broker account ID."""
+        with cls.session_scope() as session:
+            conditions = {cls.entity.brokerAccountId.name: broker_account_id}
+            records = await cls.get_by_condition(conditions=conditions)
+            session.commit()
+
+        return records if records else None

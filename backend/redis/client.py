@@ -38,7 +38,7 @@ class RedisConnectionPool:
 
 host = os.getenv("REDIS_HOST", "localhost")
 port = int(os.getenv("REDIS_PORT", 6379))
-password = os.getenv("REDIS_PASS", None)
+password = None if os.getenv("TEST") == "1" else os.getenv("REDIS_PASS", None)
 
 REDIS_CLIENT = RedisConnectionPool(
     host=host,

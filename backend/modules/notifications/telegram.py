@@ -134,7 +134,7 @@ class TelegramNotifier:
             if long_positions:
                 message += f"\n🟢 <b>VỊ THẾ LONG ({len(long_positions)} mã):</b>\n"
                 for i, pos in enumerate(long_positions[:20], 1):  # Top 10
-                    message += f"{i:2d}. <b>{pos['symbol']}</b>: +{pos['weight']:.2f}%\n"
+                    message += f"{i:2d}. <b>{pos['symbol']}</b>: {pos['weight']:.2f}%\n"
 
             # Short positions
             if short_positions:

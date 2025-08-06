@@ -45,3 +45,7 @@ class MessageConsts:
 class DNSEConsts:
     BASE_URL = "https://api.dnse.com.vn"
     BROKER = 'datafeed-lts-krx.dnse.com.vn'
+
+
+class TradingConsts:
+    LIMIT_WEIGHT_PCT = 10

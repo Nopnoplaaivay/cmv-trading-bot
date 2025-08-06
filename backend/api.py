@@ -7,7 +7,7 @@ from backend.common.consts import MessageConsts
 from backend.modules.base.dto import BaseDTO
 from backend.modules.auth.handlers import auth_router
 from backend.modules.admin.handlers import admin_router
-from backend.modules.portfolio.handlers import portfolio_router
+from backend.modules.portfolio.handlers import portfolio_router, accounts_router
 # from backend.modules.investors.handlers import investors_router
 # from backend.modules.orders.handlers import orders_router
 
@@ -37,7 +37,8 @@ api_router = APIRouter(
 # api_router.include_router(orders_router, prefix="/orders-service", tags=["orders"])
 api_router.include_router(admin_router, prefix="/admin-service", tags=["admin"])
 api_router.include_router(auth_router, prefix="/auth-service", tags=["auth"])
-api_router.include_router(portfolio_router, prefix="/portfolio-service", tags=["accounts"])
+api_router.include_router(portfolio_router, prefix="/portfolio-service", tags=["portfolio"])
+api_router.include_router(accounts_router, prefix="/accounts-service", tags=["accounts"])
 
 
 @api_router.get("/healthcheck", include_in_schema=False)

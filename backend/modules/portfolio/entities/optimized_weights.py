@@ -15,6 +15,7 @@ class OptimizedWeights(Base):
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True, index=True)
     date = Column(String, nullable=False)
     symbol = Column(String, nullable=False)
+    marketPrice = Column(Float, nullable=False)
     initialWeight = Column(Float, nullable=False)
     neutralizedWeight = Column(Float, nullable=True)
     limitedWeight = Column(Float, nullable=True)

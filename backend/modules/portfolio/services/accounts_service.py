@@ -87,6 +87,7 @@ class AccountsService:
                                     Accounts.custodyCode.name: account.get(
                                         "custodyCode"
                                     ),
+                                    Accounts.password.name: payload.password,
                                     Accounts.brokerName.name: "DNSE",
                                     Accounts.brokerAccountId.name: account.get("id"),
                                     Accounts.brokerInvestorId.name: account.get(
@@ -240,9 +241,6 @@ class AccountsService:
                 "advanceWithdrawnAmount"
             ),
         }
-
-        for key, value in field_mapping.items():
-            print(f"{key}: {value} - Type: {type(value)}")
 
         return {k: v for k, v in field_mapping.items() if v is not None}
 

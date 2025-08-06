@@ -149,7 +149,7 @@ class BaseTradingClient:
 
     def log_success(self, operation: str, data: Dict[str, Any]):
         LOGGER.info(f"{operation} successfully!")
-        LOGGER.info(json.dumps(data, indent=4, ensure_ascii=False))
+        # LOGGER.info(json.dumps(data, indent=4, ensure_ascii=False))
 
     def log_error(self, operation: str, error: Union[BaseExceptionResponse, Exception]):
         LOGGER.error(f"{operation} failed: {str(error)}")

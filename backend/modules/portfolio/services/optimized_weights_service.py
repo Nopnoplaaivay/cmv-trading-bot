@@ -81,10 +81,11 @@ class OptimizedWeightsService(BaseDailyService):
                 record = {
                     OptimizedWeights.date.name: date.strftime(SQLServerConsts.DATE_FORMAT),
                     OptimizedWeights.symbol.name: df_portfolio.columns[j],
+                    OptimizedWeights.marketPrice.name: df_portfolio.iloc[-1, j],
                     OptimizedWeights.initialWeight.name: x_CEMV[j],
-                    OptimizedWeights.neutralizedWeight.name: x_CEMV_neutralized[j],
-                    OptimizedWeights.limitedWeight.name: x_CEMV_limited[j],
-                    OptimizedWeights.neutralizedLimitedWeight.name: x_CEMV_neutralized_limit[j],
+                    OptimizedWeights.neutralizedWeight.name: max(x_CEMV_neutralized[j], 0.0),
+                    OptimizedWeights.limitedWeight.name: max(x_CEMV_limited[j], 0.0),
+                    OptimizedWeights.neutralizedLimitedWeight.name: max(x_CEMV_neutralized_limit[j], 0.0),
                     OptimizedWeights.algorithm.name: "CEMV",
                 }
                 optimized_weights.append(record)

@@ -11,8 +11,3 @@ class BalancesRepo(BaseRepo[Dict]):
     query_builder = BaseQueryBuilder(entity=entity)
     session_scope = backend_session_scope
 
-    @classmethod
-    async def get_by_account_id(cls, account_id: str) -> Optional[Dict]:
-        conditions = {cls.entity.accountId.name: account_id}
-        results = await cls.get_by_condition(conditions=conditions)
-        return results[0] if results else None

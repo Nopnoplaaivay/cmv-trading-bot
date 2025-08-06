@@ -105,33 +105,33 @@ class NotificationService:
     #     except Exception as e:
     #         LOGGER.error(f"Failed to send portfolio notification: {e}")
 
-    # async def notify_system_event(
-    #     self, title: str, description: str, alert_type: MessageType = MessageType.INFO
-    # ):
-    #     """Notify about system events."""
-    #     if not self.is_ready() or not telegram_config.enable_system_alerts:
-    #         return
+    async def notify_system_event(
+        self, title: str, description: str, alert_type: MessageType = MessageType.INFO
+    ):
+        """Notify about system events."""
+        if not self.is_ready() or not telegram_config.enable_system_alerts:
+            return
 
-    #     try:
-    #         # Use admin chat for critical system alerts if available
-    #         chat_id = (
-    #             telegram_config.admin_chat_id
-    #             if alert_type == MessageType.ERROR
-    #             else None
-    #         )
+        try:
+            # Use admin chat for critical system alerts if available
+            chat_id = (
+                telegram_config.admin_chat_id
+                if alert_type == MessageType.ERROR
+                else None
+            )
 
-    #         if chat_id and chat_id != telegram_config.chat_id:
-    #             # Send to admin chat for critical alerts
-    #             admin_notifier = TelegramNotifier(
-    #                 bot_token=telegram_config.bot_token, chat_id=chat_id
-    #             )
-    #             await admin_notifier.send_system_alert(title, description, alert_type)
+            if chat_id and chat_id != telegram_config.chat_id:
+                # Send to admin chat for critical alerts
+                admin_notifier = TelegramNotifier(
+                    bot_token=telegram_config.bot_token, chat_id=chat_id
+                )
+                await admin_notifier.send_system_alert(title, description, alert_type)
 
-    #         # Also send to main chat
-    #         await self.telegram.send_system_alert(title, description, alert_type)
+            # Also send to main chat
+            await self.telegram.send_system_alert(title, description, alert_type)
 
-    #     except Exception as e:
-    #         LOGGER.error(f"Failed to send system notification: {e}")
+        except Exception as e:
+            LOGGER.error(f"Failed to send system notification: {e}")
 
     # async def notify_authentication(
     #     self, account: str, event: str, success: bool = True
