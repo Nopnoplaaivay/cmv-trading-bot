@@ -146,8 +146,13 @@ def render_sidebar():
 
         # Logout
         if st.button("🚪 Logout", use_container_width=True, type="secondary"):
-            if st.session_state.get("refresh_token"):
-                logout_user(st.session_state.refresh_token)
+            if st.session_state.get("user_id") and st.session_state.get("session_id") and st.session_state.get("role"):
+                logout_payload = {
+                    "userId": st.session_state.user_id,
+                    "sessionId": st.session_state.session_id,
+                    "role": st.session_state.role,
+                }
+                logout_user(logout_payload=logout_payload)
 
             # Clear authentication and account-related session state
             auth_keys = [

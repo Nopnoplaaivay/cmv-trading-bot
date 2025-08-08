@@ -2,6 +2,8 @@ import streamlit as st
 import time
 from ..services.auth import login_user
 
+from backend.common.consts import CommonConsts
+from backend.utils.jwt_utils import JWTUtils
 
 def render_login_page():
     """Render login page"""
@@ -20,18 +22,12 @@ def render_login_page():
             st.write("Please log in to access your trading dashboard")
 
             with st.form("login_form", clear_on_submit=False):
-                username = st.text_input(
-                    "👤 Username", placeholder="Enter your username"
-                )
-                password = st.text_input(
-                    "🔒 Password", type="password", placeholder="Enter your password"
-                )
+                username = st.text_input("👤 Username", placeholder="Enter your username")
+                password = st.text_input("🔒 Password", type="password", placeholder="Enter your password")
 
                 col_a, col_b, col_c = st.columns([1, 2, 1])
                 with col_b:
-                    submit_button = st.form_submit_button(
-                        "🚀 Login", use_container_width=True
-                    )
+                    submit_button = st.form_submit_button("🚀 Login", use_container_width=True)
 
                 if submit_button:
                     if username and password:
@@ -39,13 +35,19 @@ def render_login_page():
                             auth_data = login_user(username, password)
                             if auth_data:
                                 # Set all auth data atomically
-                                st.session_state.auth_token = auth_data.get(
-                                    "accessToken"
-                                )
-                                st.session_state.refresh_token = auth_data.get(
-                                    "refreshToken"
-                                )
+                                st.session_state.auth_token = auth_data.get("accessToken")
+                                st.session_state.refresh_token = auth_data.get("refreshToken")
                                 st.session_state.username = username
+
+                                decoded_payload = JWTUtils.decode_token(
+                                    token=st.session_state.auth_token, secret_key=CommonConsts.AT_SECRET_KEY
+                                )
+
+                                if decoded_payload:
+                                    st.session_state.user_id = decoded_payload.get("userId")
+                                    st.session_state.session_id = decoded_payload.get("sessionId")
+                                    st.session_state.role = decoded_payload.get("role")
+
 
                                 # Set authenticated LAST to ensure all data is in place
                                 st.session_state.authenticated = True
@@ -62,18 +64,10 @@ def render_login_page():
 
                                     account_data = get_default_account()
                                     if account_data:
-                                        st.session_state.broker_account_id = (
-                                            account_data.get("broker_account_id")
-                                        )
-                                        st.session_state.account_name = (
-                                            account_data.get("name")
-                                        )
-                                        st.session_state.broker_name = account_data.get(
-                                            "broker_name"
-                                        )
-                                        st.session_state.broker_investor_id = (
-                                            account_data.get("broker_investor_id")
-                                        )
+                                        st.session_state.broker_account_id = (account_data.get("broker_account_id"))
+                                        st.session_state.account_name = (account_data.get("name"))
+                                        st.session_state.broker_name = (account_data.get("broker_name"))
+                                        st.session_state.broker_investor_id = (account_data.get("broker_investor_id"))
 
                                 st.success("✅ Login successful!")
                                 time.sleep(1)

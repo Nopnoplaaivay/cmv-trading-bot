@@ -32,11 +32,11 @@ def login_user(username: str, password: str) -> Optional[Dict]:
         return None
 
 
-def logout_user(refresh_token: str) -> bool:
+def logout_user(logout_payload: Dict) -> bool:
     try:
         response = requests.post(
             f"{API_BASE_URL}/auth-service/logout",
-            json={"refreshToken": refresh_token},
+            json=logout_payload,
             headers={"Content-Type": "application/json"},
             timeout=10,
         )
