@@ -1,5 +1,8 @@
+## Local
 python server.py -a backend.app:app -p 8000 -w 2
+streamlit run frontend.py
 
+## Production
 docker build -t cmv-pm-fe -f docker/Dockerfile.frontend .
 docker run --name cmv-pm-fe-cont -d -p 8501:8501 --env-file .prod.env cmv-pm-fe
 

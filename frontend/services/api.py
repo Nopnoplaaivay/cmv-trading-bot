@@ -1,7 +1,3 @@
-"""
-API service for CMV Trading Bot frontend
-"""
-
 import streamlit as st
 import requests
 from typing import Optional, Dict
@@ -40,8 +36,8 @@ def setup_dnse_account(custody_code: str, password: str) -> bool:
     """Setup DNSE account via API"""
     try:
         response = requests.post(
-            f"{API_BASE_URL}/accounts-service/setup-dnse",
-            json={"custodyCode": custody_code, "password": password},
+            f"{API_BASE_URL}/accounts-service/setup",
+            json={"username": custody_code, "password": password},
             headers=get_auth_headers(),
             timeout=30,
         )
