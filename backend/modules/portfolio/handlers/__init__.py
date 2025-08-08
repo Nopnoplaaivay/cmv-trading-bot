@@ -1,3 +1,9 @@
 from .routers import portfolio_router, accounts_router
-from .portfolio import get_analysis
+from .portfolio import (
+    get_analysis,
+    create_custom_portfolio,
+    send_portfolio_report_notification,
+    get_portfolio_by_id,
+    get_my_portfolios
+)
 from .accounts import setup_dnse_account, get_default_account

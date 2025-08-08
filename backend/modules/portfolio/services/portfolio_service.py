@@ -4,6 +4,7 @@ from pydantic import ValidationError
 
 from backend.common.consts import SQLServerConsts, MessageConsts
 from backend.common.responses.exceptions import BaseExceptionResponse
+from backend.modules.auth.types.auth import JwtPayload
 from backend.modules.base.query_builder import TextSQL
 from backend.modules.base_daily import BaseDailyService
 from backend.modules.portfolio.entities import StocksUniverse, Portfolios
@@ -163,7 +164,7 @@ class PortfoliosService(BaseDailyService):
             )
             session.commit()
 
-        return True
+        return portfolio_id
 
     @classmethod
     async def validate_symbols(
@@ -196,3 +197,51 @@ class PortfoliosService(BaseDailyService):
                 message=MessageConsts.BAD_REQUEST,
                 errors=str(e),
             )
+
+    @classmethod
+    async def get_portfolio_by_id(cls, portfolio_id: str, user: JwtPayload) -> pd.DataFrame:
+        portfolio = await cls.repo.get_by_portfolio_id(portfolio_id=portfolio_id)
+        if not portfolio:
+            raise BaseExceptionResponse(
+                http_code=404,
+                status_code=404,
+                message=MessageConsts.NOT_FOUND,
+                errors=f"Portfolio {portfolio_id} not found",
+            )
+
+        unique_user_ids = set(port[Portfolios.userId.name] for port in portfolio)
+        for user_id in unique_user_ids:
+            if user_id != user.userId:
+                raise BaseExceptionResponse(
+                    http_code=403,
+                    status_code=403,
+                    message=MessageConsts.FORBIDDEN,
+                    errors=f"User {user.userId} does not have access to portfolio {portfolio_id}",
+                )
+
+        return {"portfolio": portfolio}
+
+    @classmethod
+    async def get_portfolios_by_user_id(cls, user: JwtPayload) -> pd.DataFrame:
+        portfolios = await cls.repo.get_by_user_id(user_id=user.userId)
+        if not portfolios:
+            raise BaseExceptionResponse(
+                http_code=404,
+                status_code=404,
+                message=MessageConsts.NOT_FOUND,
+                errors=f"No portfolios found for user {user.userId}",
+            )
+
+        unique_user_ids = set(port[Portfolios.userId.name] for port in portfolios)
+        for user_id in unique_user_ids:
+            if user_id != user.userId:
+                raise BaseExceptionResponse(
+                    http_code=403,
+                    status_code=403,
+                    message=MessageConsts.FORBIDDEN,
+                    errors=f"User {user.userId} does not have access to this user's portfolio",
+                )
+
+        print(portfolios)
+
+        return {"portfolio": portfolios}
