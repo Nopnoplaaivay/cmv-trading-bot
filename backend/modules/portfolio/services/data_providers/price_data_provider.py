@@ -150,29 +150,6 @@ class PriceDataProvider:
             LOGGER.error(f"❌ Error saving to cache {cache_key}: {str(e)}")
             return False
 
-    @classmethod
-    async def clear_cache_pattern(cls, pattern: str = None) -> int:
-        """Clear cache entries matching a pattern. If no pattern provided, clears all price data cache."""
-        try:
-            if pattern is None:
-                pattern = f"{cls.CACHE_PREFIX}:*"
-
-            # Get all keys matching the pattern
-            keys = redis_binary_conn.keys(pattern)
-
-            if keys:
-                deleted_count = redis_binary_conn.delete(*keys)
-                LOGGER.info(
-                    f"🧹 Cleared {deleted_count} cache entries matching pattern: {pattern}"
-                )
-                return deleted_count
-            else:
-                LOGGER.info(f"🔍 No cache entries found matching pattern: {pattern}")
-                return 0
-
-        except Exception as e:
-            LOGGER.error(f"❌ Error clearing cache pattern {pattern}: {str(e)}")
-            return 0
 
     @classmethod
     async def fetch_from_database(cls, from_date: str) -> pd.DataFrame:
