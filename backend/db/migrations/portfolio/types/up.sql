@@ -111,23 +111,40 @@ CREATE TYPE [BotPortfolio].[deals] AS TABLE(
 );
 GO
 
-CREATE TYPE [BotPortfolio].[optimizedWeights] AS TABLE(
-    [id] INT,
-    [date] VARCHAR(10) NOT NULL,
-    [symbol] VARCHAR(10) NOT NULL,
-    [marketPrice] FLOAT NOT NULL,
-    [initialWeight] DECIMAL(8,6) NOT NULL,
-    [neutralizedWeight] DECIMAL(8,6),
-    [limitedWeight] DECIMAL(8,6),
-    [neutralizedLimitedWeight] DECIMAL(8,6),
-    [algorithm] VARCHAR(50),
 
+CREATE TYPE [BotPortfolio].[portfolios] AS TABLE(
+    [id] INT,
+    [date] VARCHAR(10),
+    [symbol] VARCHAR(10),
+    [portfolioId] VARCHAR(50),
+    [portfolioType] VARCHAR(50),
+    [userId] INT,
+    [marketPrice] FLOAT,
+    [initialWeight] FLOAT NOT NULL,
+    [neutralizedWeight] FLOAT,
+    [limitedWeight] FLOAT,
+    [neutralizedLimitedWeight] FLOAT,
+    [algorithm] VARCHAR(50) DEFAULT 'CMV',
     [__createdAt__] VARCHAR(19),
     [__updatedAt__] VARCHAR(19)
 );
 GO
 
-CREATE TYPE [BotPortfolio].[UniverseTopMonthly] AS TABLE(
+
+CREATE TYPE [BotPortfolio].[portfolioMetadata] AS TABLE (
+    portfolioId NVARCHAR(50) PRIMARY KEY,
+    userId INT NOT NULL,
+    name NVARCHAR(100),
+    description NVARCHAR(500),
+    isActive BIT DEFAULT 1,
+    [__createdAt__] VARCHAR(19),
+    [__updatedAt__] VARCHAR(19)
+);
+GO
+
+
+
+CREATE TYPE [BotPortfolio].[stocksUniverse] AS TABLE(
     [id] INT,
     [year] INT NOT NULL,
     [month] INT NOT NULL,

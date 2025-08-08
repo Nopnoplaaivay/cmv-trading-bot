@@ -4,15 +4,14 @@ from backend.common.consts import SQLServerConsts
 from backend.modules.base.entities import Base
 
 
-
-class UniverseTopMonthly(Base):
-    __tablename__ = 'universeTopMonthly'
-    __table_args__ = (
-        {"schema": SQLServerConsts.PORTFOLIO_SCHEMA},
-        )
+class StocksUniverse(Base):
+    __tablename__ = "stocksUniverse"
+    __table_args__ = ({"schema": SQLServerConsts.PORTFOLIO_SCHEMA},)
     __sqlServerType__ = f"[{SQLServerConsts.PORTFOLIO_SCHEMA}].[{__tablename__}]"
 
-    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True, index=True)
+    id = Column(
+        Integer, primary_key=True, nullable=False, autoincrement=True, index=True
+    )
     year = Column(Integer, nullable=False)
     month = Column(Integer, nullable=False)
     symbol = Column(String, nullable=False)

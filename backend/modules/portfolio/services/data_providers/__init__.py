@@ -1,2 +1,3 @@
 from .account_data_provider import AccountDataProvider
 from .portfolio_data_provider import PortfolioDataProvider
+from .price_data_provider import PriceDataProvider

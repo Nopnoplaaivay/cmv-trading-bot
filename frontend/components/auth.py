@@ -48,7 +48,6 @@ def render_login_page():
                                     st.session_state.session_id = decoded_payload.get("sessionId")
                                     st.session_state.role = decoded_payload.get("role")
 
-
                                 # Set authenticated LAST to ensure all data is in place
                                 st.session_state.authenticated = True
 
@@ -64,6 +63,7 @@ def render_login_page():
 
                                     account_data = get_default_account()
                                     if account_data:
+                                        st.session_state.custody_code = account_data.get("custody_code")
                                         st.session_state.broker_account_id = (account_data.get("broker_account_id"))
                                         st.session_state.account_name = (account_data.get("name"))
                                         st.session_state.broker_name = (account_data.get("broker_name"))

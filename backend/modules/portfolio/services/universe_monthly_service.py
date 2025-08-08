@@ -2,16 +2,17 @@ import time
 import pandas as pd
 import numpy as np
 import warnings
+
 warnings.filterwarnings(
     "ignore",
     message=".*Downcasting behavior in `replace` is deprecated.*",
-    category=FutureWarning
+    category=FutureWarning,
 )
 from scipy.stats import rankdata
 
 from backend.common.consts import SQLServerConsts
 from backend.modules.base_monthly import BaseMonthlyService
-from backend.modules.portfolio.repositories import UniverseTopMonthlyRepo
+from backend.modules.portfolio.repositories import StocksUniverseRepo
 from backend.db.sessions import mart_session_scope, lake_session_scope
 from backend.utils.data_utils import DataUtils
 from backend.utils.logger import LOGGER
@@ -20,8 +21,8 @@ from backend.utils.logger import LOGGER
 UNIVERSE_SIZE = 20
 
 
-class UniverseTopMonthlyService(BaseMonthlyService):
-    repo = UniverseTopMonthlyRepo
+class StocksUniverseService(BaseMonthlyService):
+    repo = StocksUniverseRepo
 
     @classmethod
     async def update_data(cls, from_date):
@@ -210,7 +211,6 @@ class UniverseTopMonthlyService(BaseMonthlyService):
             {np.inf: np.nan, -np.inf: np.nan}
         ).infer_objects(copy=False)
 
-
         df_filtered = df_filtered.sort_values(
             by=["year", "month", "symbol"]
         ).reset_index(drop=True)
@@ -241,7 +241,7 @@ class UniverseTopMonthlyService(BaseMonthlyService):
             "Real Estate",
             "Banks",
             "Basic Resources",
-            "Retail"
+            "Retail",
         ]
         df_filtered = df_filtered[df_filtered["sectorL2"].isin(available_sectors)]
 
@@ -258,7 +258,7 @@ class UniverseTopMonthlyService(BaseMonthlyService):
         df_filtered["cap_group_rank"] = cls.apply_rank_by_date(
             df_filtered, "cap", "date", "sectorL2"
         )
-        
+
         end_time = time.time()
         LOGGER.info(f"--- GROUP RANKING TIME: {end_time - start_time:.2f} seconds ---")
 
@@ -281,7 +281,9 @@ class UniverseTopMonthlyService(BaseMonthlyService):
         FILTER 3: Xếp hạng các cổ phiếu còn lại và chọn ra 20 mã tốt nhất.
         """
         df_ranked = df_filtered.copy()
-        df_ranked["CompositeScore"] = df_ranked['roe_group_rank'] + df_ranked['averageLiquidity21_group_rank']
+        df_ranked["CompositeScore"] = (
+            df_ranked["roe_group_rank"] + df_ranked["averageLiquidity21_group_rank"]
+        )
 
         final_df = pd.DataFrame()
         for year_month, group in df_ranked.groupby(["year", "month"]):

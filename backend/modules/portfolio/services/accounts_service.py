@@ -40,6 +40,7 @@ class AccountsService:
                     return DefaultAccountResponseDTO(
                         account_id=account[Accounts.id.name],
                         name=account[Accounts.name.name],
+                        custody_code=account[Accounts.custodyCode.name],
                         broker_name=account[Accounts.brokerName.name],
                         broker_account_id=account[Accounts.brokerAccountId.name],
                         broker_investor_id=account[Accounts.brokerInvestorId.name],

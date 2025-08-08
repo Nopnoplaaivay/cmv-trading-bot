@@ -3,11 +3,11 @@ from typing import Dict
 from backend.db.sessions import backend_session_scope
 from backend.modules.base.query_builder import BaseQueryBuilder
 from backend.modules.base.repositories import BaseRepo
-from backend.modules.portfolio.entities import UniverseTopMonthly
+from backend.modules.portfolio.entities import StocksUniverse
 
 
-class UniverseTopMonthlyRepo(BaseRepo[Dict]):
-    entity = UniverseTopMonthly
+class StocksUniverseRepo(BaseRepo[Dict]):
+    entity = StocksUniverse
     query_builder = BaseQueryBuilder(entity=entity)
     session_scope = backend_session_scope
 

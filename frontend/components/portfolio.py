@@ -64,29 +64,14 @@ def display_current_positions(positions: List[Dict]):
     if "market_price" in df_positions.columns:
         df_positions = df_positions.drop(columns=["market_price"])
 
-    df_positions["cost_price"] = df_positions["cost_price"].apply(
-        lambda x: safe_numeric_value(x, default=0)
-    )
-    df_positions["break_even_price"] = df_positions["break_even_price"].apply(
-        lambda x: safe_numeric_value(x, default=0)
-    )
-    df_positions["market_value"] = df_positions["market_value"].apply(
-        lambda x: safe_numeric_value(x, default=0)
-    )
-    df_positions["realized_profit"] = df_positions["realized_profit"].apply(
-        lambda x: safe_numeric_value(x, default=0)
-    )
-    df_positions["unrealized_profit"] = df_positions["unrealized_profit"].apply(
-        lambda x: safe_numeric_value(x, default=0)
-    )
-    df_positions["weight"] = df_positions["weight"].apply(
-        lambda x: safe_numeric_value(x, default=0)
-    )
-    df_positions["weight_over_sv"] = df_positions["weight_over_sv"].apply(
-        lambda x: safe_numeric_value(x, default=0)
-    )
+    df_positions["cost_price"] = df_positions["cost_price"].apply(lambda x: safe_numeric_value(x, default=0))
+    df_positions["break_even_price"] = df_positions["break_even_price"].apply(lambda x: safe_numeric_value(x, default=0))
+    df_positions["market_value"] = df_positions["market_value"].apply(lambda x: safe_numeric_value(x, default=0))
+    df_positions["realized_profit"] = df_positions["realized_profit"].apply(lambda x: safe_numeric_value(x, default=0))
+    df_positions["unrealized_profit"] = df_positions["unrealized_profit"].apply(lambda x: safe_numeric_value(x, default=0))
+    df_positions["weight"] = df_positions["weight"].apply(lambda x: safe_numeric_value(x, default=0))
+    df_positions["weight_over_sv"] = df_positions["weight_over_sv"].apply(lambda x: safe_numeric_value(x, default=0))
 
-    print(df_positions.head())  # Debugging line to check DataFrame structure
 
     # Convert numeric columns to proper dtypes
     numeric_columns = [
@@ -157,7 +142,7 @@ def display_current_positions(positions: List[Dict]):
     display_df = df_positions.copy()
 
     column_config = {
-        "symbol": st.column_config.TextColumn("Symbol", width="small"),
+        "symbol": st.column_config.TextColumn("Mã", width="small"),
         "quantity": st.column_config.NumberColumn("Khối lượng", format="%d"),
         "cost_price": st.column_config.NumberColumn("Giá vốn TB", format="%.2f"),
         "break_even_price": st.column_config.NumberColumn("Giá hòa vốn", format="%.2f"),

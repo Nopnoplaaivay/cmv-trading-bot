@@ -1,13 +1,13 @@
 from typing import Optional, Dict
 
 from backend.common.consts import TradingConsts
-from backend.modules.portfolio.repositories import OptimizedWeightsRepo
-from backend.modules.portfolio.entities import OptimizedWeights
+from backend.modules.portfolio.repositories import PortfoliosRepo
+from backend.modules.portfolio.entities import Portfolios
 from backend.utils.logger import LOGGER
 
 
 class PortfolioDataProvider:
-    repo = OptimizedWeightsRepo
+    repo = PortfoliosRepo
 
     @classmethod
     async def get_portfolio_weights(
@@ -15,7 +15,7 @@ class PortfolioDataProvider:
     ) -> Optional[Dict]:
         try:
             with cls.repo.session_scope() as session:
-                conditions = {OptimizedWeights.date.name: last_trading_date}
+                conditions = {Portfolios.date.name: last_trading_date}
                 records = await cls.repo.get_by_condition(conditions=conditions)
 
                 if not records:
@@ -28,22 +28,22 @@ class PortfolioDataProvider:
                 market_neutral_positions = []
 
                 for record in records:
-                    symbol = record[OptimizedWeights.symbol.name]
+                    symbol = record[Portfolios.symbol.name]
                     initial_weight_pct = float(
-                        record[OptimizedWeights.initialWeight.name] * 100 or 0
+                        record[Portfolios.initialWeight.name] * 100 or 0
                     )
                     neutralized_weight_pct = float(
-                        record[OptimizedWeights.neutralizedWeight.name] * 100 or 0
+                        record[Portfolios.neutralizedWeight.name] * 100 or 0
                     )
 
                     if initial_weight_pct >= 1:
                         long_only_positions.append(
                             {
                                 "symbol": symbol,
-                                "marketPrice": float(record[OptimizedWeights.marketPrice.name]),
-                                "weight": float(
-                                    initial_weight_pct
+                                "marketPrice": float(
+                                    record[Portfolios.marketPrice.name]
                                 ),
+                                "weight": float(initial_weight_pct),
                             }
                         )
 
@@ -51,7 +51,9 @@ class PortfolioDataProvider:
                         market_neutral_positions.append(
                             {
                                 "symbol": symbol,
-                                "marketPrice": float(record[OptimizedWeights.marketPrice.name]),
+                                "marketPrice": float(
+                                    record[Portfolios.marketPrice.name]
+                                ),
                                 "weight": float(
                                     min(
                                         neutralized_weight_pct,

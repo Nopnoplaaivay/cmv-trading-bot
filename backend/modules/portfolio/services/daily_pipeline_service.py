@@ -5,10 +5,10 @@ from typing import Dict, Any
 from backend.modules.portfolio.services.balance_service import BalanceService
 from backend.modules.portfolio.services.deals_service import DealsService
 from backend.modules.portfolio.services import (
-    UniverseTopMonthlyService,
+    StocksUniverseService,
 )
-from backend.modules.portfolio.services.optimized_weights_service import (
-    OptimizedWeightsService,
+from backend.modules.portfolio.services.portfolio_service import (
+    PortfoliosService,
 )
 from backend.modules.portfolio.services.notification_service import (
     PortfolioNotificationService,
@@ -74,7 +74,7 @@ class DailyDataPipelineService:
             LOGGER.info("Step 3: Updating universe top monthly...")
             universe_start = datetime.now()
             universe_result = (
-                await UniverseTopMonthlyService.update_newest_data_all_monthly()
+                await StocksUniverseService.update_newest_data_all_monthly()
             )
             universe_duration = (datetime.now() - universe_start).total_seconds()
 
@@ -91,9 +91,7 @@ class DailyDataPipelineService:
             # Step 4: Update Optimized Weights
             LOGGER.info("Step 4: Updating optimized weights...")
             weights_start = datetime.now()
-            weights_result = (
-                await OptimizedWeightsService.update_newest_data_all_daily()
-            )
+            weights_result = await PortfoliosService.update_newest_data_all_daily()
             weights_duration = (datetime.now() - weights_start).total_seconds()
 
             pipeline_results["steps"]["weights_update"] = {

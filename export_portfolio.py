@@ -13,7 +13,7 @@ def test():
                 ,[symbol]
                 ,[initialWeight]
                 ,[neutralizedWeight]
-            FROM [CMVTradingBot].[BotPortfolio].[optimizedWeights]
+            FROM [CMVTradingBot].[BotPortfolio].[portfolios]
             ORDER BY [date] ASC
         """
 

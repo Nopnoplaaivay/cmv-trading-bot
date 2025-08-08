@@ -6,7 +6,7 @@ API_BASE_URL = os.getenv("BACKEND_API_URL", "http://localhost:8000/api/v1")
 
 # Streamlit Configuration
 STREAMLIT_CONFIG = {
-    "page_title": "CMV Trading Bot",
+    "page_title": "CMV Portfolio Management",
     "page_icon": "📈",
     "layout": "wide",
     "initial_sidebar_state": "expanded",

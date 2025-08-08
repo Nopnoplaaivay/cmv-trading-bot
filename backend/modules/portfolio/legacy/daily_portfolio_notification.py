@@ -15,11 +15,11 @@ from backend.modules.dnse.trading_session import TradingSession
 from backend.modules.auth.entities import Users
 from backend.modules.auth.repositories import UsersRepo
 from backend.modules.portfolio.entities import (
-    OptimizedWeights,
+    Portfolios,
 )
 from backend.modules.portfolio.repositories import (
     AccountsRepo,
-    OptimizedWeightsRepo,
+    PortfoliosRepo,
 )
 from backend.modules.notifications.service import notification_service, notify_error
 from backend.modules.notifications.telegram import MessageType
@@ -130,7 +130,7 @@ class TradingCalendarService:
 
 # Portfolio Data Provider
 class PortfolioDataProvider:
-    def __init__(self, repo: OptimizedWeightsRepo = OptimizedWeightsRepo):
+    def __init__(self, repo: PortfoliosRepo = PortfoliosRepo):
         self.repo = repo
 
     async def get_portfolio_weights(
@@ -138,7 +138,7 @@ class PortfolioDataProvider:
     ) -> Optional[Dict]:
         try:
             with self.repo.session_scope() as session:
-                conditions = {OptimizedWeights.date.name: last_trading_date}
+                conditions = {Portfolios.date.name: last_trading_date}
                 records = await self.repo.get_by_condition(conditions=conditions)
 
                 if not records:
@@ -151,12 +151,12 @@ class PortfolioDataProvider:
                 market_neutral_positions = []
 
                 for record in records:
-                    symbol = record[OptimizedWeights.symbol.name]
+                    symbol = record[Portfolios.symbol.name]
                     initial_weight_pct = (
-                        record[OptimizedWeights.initialWeight.name] * 100 or 0
+                        record[Portfolios.initialWeight.name] * 100 or 0
                     )
                     neutralized_weight_pct = (
-                        record[OptimizedWeights.neutralizedWeight.name] * 100 or 0
+                        record[Portfolios.neutralizedWeight.name] * 100 or 0
                     )
 
                     if initial_weight_pct > 1:
@@ -786,7 +786,7 @@ class DailyPortfolioNotificationService:
         self.portfolio_data_provider = PortfolioDataProvider()
 
         # Legacy compatibility
-        self.repo = OptimizedWeightsRepo
+        self.repo = PortfoliosRepo
 
     # Legacy methods for backward compatibility
     @classmethod

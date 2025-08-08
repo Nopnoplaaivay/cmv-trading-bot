@@ -45,9 +45,9 @@ class BaseDailyService:
 
     @classmethod
     async def update_newest_data_from_date(cls, from_date: datetime.datetime, process_tracking: Dict):
-        from_date_ = (from_date - relativedelta(months=3)).strftime(SQLServerConsts.DATE_FORMAT)
+        from_date_quarter_back_str = (from_date - relativedelta(months=3)).strftime(SQLServerConsts.DATE_FORMAT)
         from_date_str = from_date.strftime(SQLServerConsts.DATE_FORMAT)
-        data = await cls.update_data(from_date=from_date_)
+        data = await cls.update_data(from_date=from_date_quarter_back_str)
         data = data[data['date'] >= from_date_str].reset_index(drop=True)
         last_key_value = data['date'].iloc[-1]
 
@@ -74,5 +74,5 @@ class BaseDailyService:
 
     @classmethod
     @abstractmethod
-    def update_data(cls, from_date) -> pd.DataFrame:
+    def update_data(cls, from_date: str) -> pd.DataFrame:
         pass

@@ -10,6 +10,7 @@ class SetupDNSEAccountDTO(BaseDTO):
 class DefaultAccountResponseDTO(BaseDTO):
     account_id: str
     name: str
+    custody_code: str
     broker_account_id: str
     broker_name: str = "DNSE"
     broker_investor_id: str
