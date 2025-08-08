@@ -238,11 +238,13 @@ class PortfolioProcessor:
             accumulate_quantity = deal.get("accumulateQuantity", 0)
             market_price_value = deal.get("marketPrice", 0)
             cost_price_value = deal.get("averageCostPrice", 0)
+            break_even_price_value = deal.get("breakEvenPrice", 0)
             unrealized_profit_value = deal.get("unrealizedProfit", 0)
 
             if accumulate_quantity > 0 and market_price_value > 0:
                 market_price = Money(Decimal(str(market_price_value)))
                 cost_price = Money(Decimal(str(cost_price_value)))
+                break_even_price = Money(Decimal(str(break_even_price_value)))
                 unrealized_profit = Money(Decimal(str(unrealized_profit_value)))
 
                 market_value = market_price.amount * accumulate_quantity
@@ -254,6 +256,7 @@ class PortfolioProcessor:
                     quantity=accumulate_quantity,
                     market_price=market_price,
                     cost_price=cost_price,
+                    break_even_price=break_even_price,
                     weight=weight,
                     unrealized_profit=unrealized_profit,
                 )
@@ -293,6 +296,7 @@ class RecommendationEngine:
                     quantity=0,
                     market_price=Money(Decimal("0")),
                     cost_price=Money(Decimal("0")),
+                    break_even_price=Money(Decimal("0")),
                     weight=Weight(Decimal("0")),
                 ),
             ).weight.percentage
@@ -315,6 +319,7 @@ class RecommendationEngine:
                         quantity=0,
                         market_price=Money(Decimal("0")),
                         cost_price=Money(Decimal("0")),
+                        break_even_price=Money(Decimal("0")),
                         weight=Weight(Decimal("0")),
                     ),
                 ).market_value.amount
@@ -876,6 +881,9 @@ class DailyPortfolioNotificationService:
                 quantity=pos_dict["quantity"],
                 market_price=Money(Decimal(str(pos_dict["market_price"]))),
                 cost_price=Money(Decimal(str(pos_dict.get("cost_price", 0)))),
+                break_even_price=Money(
+                    Decimal(str(pos_dict.get("break_even_price", 0)))
+                ),
                 weight=Weight(Decimal(str(pos_dict["weight_pct"]))),
                 unrealized_profit=Money(
                     Decimal(str(pos_dict.get("unrealized_profit", 0)))

@@ -1,1 +1,1 @@
-from .accounts import SetupDNSEAccountDTO
+from .accounts import SetupDNSEAccountDTO, DefaultAccountResponseDTO

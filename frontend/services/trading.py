@@ -1,7 +1,3 @@
-"""
-Trading service for CMV Trading Bot frontend (Simulated DNSE API)
-"""
-
 import streamlit as st
 import time
 import random
@@ -53,8 +49,6 @@ def place_order_via_dnse(
 
 
 def get_order_status(order_id: str) -> Dict:
-    """Get order status from DNSE API (Simulated)"""
-    # Find order in history
     for order in st.session_state.order_history:
         if order["order_id"] == order_id:
             return order
@@ -62,7 +56,6 @@ def get_order_status(order_id: str) -> Dict:
 
 
 def cancel_order(order_id: str) -> bool:
-    """Cancel order via DNSE API (Simulated)"""
     for order in st.session_state.order_history:
         if order["order_id"] == order_id and order["status"] == "PENDING":
             order["status"] = "CANCELLED"
@@ -71,7 +64,6 @@ def cancel_order(order_id: str) -> bool:
 
 
 def execute_single_order(recommendation: Dict, action_type: str):
-    """Execute a single order"""
     if not st.session_state.get("broker_account_id"):
         st.error("Please set broker account ID first")
         return
@@ -92,7 +84,6 @@ def execute_single_order(recommendation: Dict, action_type: str):
 
 
 def execute_bulk_orders(recommendations: List[Dict]):
-    """Execute multiple orders with progress tracking"""
     if not st.session_state.get("broker_account_id"):
         st.error("Please set broker account ID first")
         return

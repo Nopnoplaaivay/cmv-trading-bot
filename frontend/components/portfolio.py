@@ -61,8 +61,42 @@ def display_current_positions(positions: List[Dict]):
     # Create DataFrame
     df_positions = pd.DataFrame(positions)
 
+    if "market_price" in df_positions.columns:
+        df_positions = df_positions.drop(columns=["market_price"])
+
+    df_positions["cost_price"] = df_positions["cost_price"].apply(
+        lambda x: safe_numeric_value(x, default=0)
+    )
+    df_positions["break_even_price"] = df_positions["break_even_price"].apply(
+        lambda x: safe_numeric_value(x, default=0)
+    )
+    df_positions["market_value"] = df_positions["market_value"].apply(
+        lambda x: safe_numeric_value(x, default=0)
+    )
+    df_positions["realized_profit"] = df_positions["realized_profit"].apply(
+        lambda x: safe_numeric_value(x, default=0)
+    )
+    df_positions["unrealized_profit"] = df_positions["unrealized_profit"].apply(
+        lambda x: safe_numeric_value(x, default=0)
+    )
+    df_positions["weight"] = df_positions["weight"].apply(
+        lambda x: safe_numeric_value(x, default=0)
+    )
+    df_positions["weight_over_sv"] = df_positions["weight_over_sv"].apply(
+        lambda x: safe_numeric_value(x, default=0)
+    )
+
+    print(df_positions.head())  # Debugging line to check DataFrame structure
+
     # Convert numeric columns to proper dtypes
-    numeric_columns = ["quantity", "market_price", "market_value", "unrealized_profit"]
+    numeric_columns = [
+        "quantity",
+        "cost_price",
+        "break_even_price",
+        "market_value",
+        "realized_profit",
+        "unrealized_profit",
+    ]
     weight_columns = ["weight_percentage", "weight"]
 
     for col in numeric_columns:
@@ -97,7 +131,6 @@ def display_current_positions(positions: List[Dict]):
             st.plotly_chart(fig_pie, use_container_width=True)
 
     with col2:
-        # Top positions by value
         if (
             "market_value" in df_positions.columns
             and not df_positions["market_value"].isna().all()
@@ -119,19 +152,21 @@ def display_current_positions(positions: List[Dict]):
                     "Unable to display top positions chart due to data format issues"
                 )
 
-    # Detailed positions table
     st.markdown("#### 📋 Detailed Positions")
 
-    # Format the DataFrame for display
     display_df = df_positions.copy()
 
-    # Column configuration for better display
     column_config = {
         "symbol": st.column_config.TextColumn("Symbol", width="small"),
-        "quantity": st.column_config.NumberColumn("Quantity", format="%d"),
-        "market_price": st.column_config.NumberColumn("Market Price", format="$%.2f"),
-        "market_value": st.column_config.NumberColumn("Market Value", format="$%.2f"),
-        "unrealized_profit": st.column_config.NumberColumn("P&L", format="$%.2f"),
+        "quantity": st.column_config.NumberColumn("Khối lượng", format="%d"),
+        "cost_price": st.column_config.NumberColumn("Giá vốn TB", format="%.2f"),
+        "break_even_price": st.column_config.NumberColumn("Giá hòa vốn", format="%.2f"),
+        "weight": st.column_config.NumberColumn("Trọng số (%)/ Tài sản ròng", format="%.2f%%"),
+        "weight_over_sv": st.column_config.NumberColumn("Trọng số (%)/ Giá trị cổ phiếu", format="%.2f%%"),
+        "market_value": st.column_config.NumberColumn("Giá trị thị trường", format="%.2f"),
+        "realized_profit": st.column_config.NumberColumn("Lãi thực hiện", format="%.2f"),
+        "unrealized_profit": st.column_config.NumberColumn("Lãi chưa thực hiện", format="%.2f")
+
     }
 
     if "weight_percentage" in display_df.columns:

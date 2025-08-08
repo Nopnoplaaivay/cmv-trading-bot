@@ -1,7 +1,7 @@
 ARG PYTHON_VERSION=3.11.4
 FROM python:$PYTHON_VERSION
 
-ENV BASE_DIR=paper_trading_app
+ENV BASE_DIR=cmv_pm_app
 
 RUN echo "Installing system deps" \
     && apt-get update \
@@ -29,7 +29,6 @@ WORKDIR $BASE_DIR
 RUN echo "Copy setup file to $BASE_DIR"
 COPY ./requirements.txt ./requirements.txt
 RUN cat requirements.txt
-COPY ./.env .env
 RUN ls -a
 RUN pip install -r requirements.txt
 

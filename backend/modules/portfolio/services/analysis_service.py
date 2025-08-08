@@ -61,40 +61,30 @@ class PortfolioAnalysisService:
                     )
 
                 async with session.users_client() as users_client:
-                    balance_dict = await users_client.get_account_balance(
-                        account_no=broker_account_id
-                    )
+                    balance_dict = await users_client.get_account_balance(account_no=broker_account_id)
                     deals_dict = await users_client.get_account_deals(
                         account_no=broker_account_id
                     )
 
                     if not balance_dict:
-                        LOGGER.warning(
-                            f"No balance data found for account {broker_account_id}"
-                        )
+                        LOGGER.warning(f"No balance data found for account {broker_account_id}")
                         return None
 
                     if not deals_dict:
-                        LOGGER.warning(
-                            f"No deals data found for account {broker_account_id}"
-                        )
+                        LOGGER.warning(f"No deals data found for account {broker_account_id}")
                         return None
 
                     deals_list = deals_dict.get("deals", [])
-                    available_cash = Money(
-                        Decimal(str(balance_dict.get("availableCash", 0)))
-                    )
-                    net_asset_value = Money(
-                        Decimal(str(balance_dict.get("netAssetValue", 0)))
-                    )
+                    available_cash = Money(Decimal(str(balance_dict.get("availableCash", 0))))
+                    net_asset_value = Money(Decimal(str(balance_dict.get("netAssetValue", 0))))
+                    stock_value = Money(Decimal(str(balance_dict.get("stockValue", 0))))
 
                     # Process current deals into portfolio positions
                     current_positions = PortfolioProcessor.process_deals_to_positions(
-                        deals_list, float(net_asset_value.amount)
+                        deals_list, float(net_asset_value.amount), float(stock_value.amount)
                     )
 
                     # Get target portfolio weights
-                    current_date = TimeUtils.get_current_vn_time()
                     last_trading_date, next_trading_date = cls.trading_calendar.get_last_next_trading_dates()
                     if not last_trading_date or not next_trading_date:
                         LOGGER.warning(
@@ -107,8 +97,6 @@ class PortfolioAnalysisService:
 
                     LOGGER.info(f"Sending daily portfolio notification for {next_trading_date_str}")
 
-
-
                     portfolio_data = (
                         await cls.portfolio_data_provider.get_portfolio_weights(
                             last_trading_date=last_trading_date_str,
@@ -117,9 +105,7 @@ class PortfolioAnalysisService:
                     )
 
                     if not portfolio_data:
-                        LOGGER.warning(
-                            f"No portfolio weights found for {next_trading_date_str}"
-                        )
+                        LOGGER.warning(f"No portfolio weights found for {next_trading_date_str}")
                         return None
 
                     # Get target weights based on strategy: long only or market neutral

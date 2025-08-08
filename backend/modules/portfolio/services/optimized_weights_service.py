@@ -1,5 +1,5 @@
 import pandas as pd
-import numpy as np
+import warnings
 
 from backend.common.consts import SQLServerConsts
 from backend.db.sessions import mart_session_scope
@@ -38,11 +38,13 @@ class OptimizedWeightsService(BaseDailyService):
                 where rn = 1 and [date] >= '{from_date}'
                 ORDER BY [date], [ticker];
             """
-            conn = mart_session.connection().connection
-            df_stock = pd.read_sql_query(sql_query, conn)
-            df_stock_pivoted = df_stock.pivot(
-                index="date", columns="ticker", values="closePriceAdjusted"
-            )
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                conn = mart_session.connection().connection
+                df_stock = pd.read_sql_query(sql_query, conn)
+                df_stock_pivoted = df_stock.pivot(
+                    index="date", columns="ticker", values="closePriceAdjusted"
+                )
 
         T = df_stock_pivoted.shape[0]
         tmp_year = from_date_.year

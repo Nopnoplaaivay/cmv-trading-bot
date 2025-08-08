@@ -1,9 +1,8 @@
-"""
-Configuration for CMV Trading Bot frontend
-"""
+import os
+
 
 # API Configuration
-API_BASE_URL = "http://localhost:8000/api/v1"
+API_BASE_URL = os.getenv("BACKEND_API_URL", "http://localhost:8000/api/v1")
 
 # Streamlit Configuration
 STREAMLIT_CONFIG = {

@@ -1,7 +1,3 @@
-"""
-Login component for CMV Trading Bot frontend
-"""
-
 import streamlit as st
 import time
 from ..services.auth import login_user
@@ -42,7 +38,7 @@ def render_login_page():
                         with st.spinner("🔄 Authenticating..."):
                             auth_data = login_user(username, password)
                             if auth_data:
-                                st.session_state.authenticated = True
+                                # Set all auth data atomically
                                 st.session_state.auth_token = auth_data.get(
                                     "accessToken"
                                 )
@@ -50,9 +46,41 @@ def render_login_page():
                                     "refreshToken"
                                 )
                                 st.session_state.username = username
+
+                                # Set authenticated LAST to ensure all data is in place
+                                st.session_state.authenticated = True
+
+                                # Initialize other required session state
+                                if "order_history" not in st.session_state:
+                                    st.session_state.order_history = []
+                                if "selected_recommendations" not in st.session_state:
+                                    st.session_state.selected_recommendations = []
+
+                                # Fetch default account information
+                                with st.spinner("📊 Loading account information..."):
+                                    from ..services.auth import get_default_account
+
+                                    account_data = get_default_account()
+                                    if account_data:
+                                        st.session_state.broker_account_id = (
+                                            account_data.get("broker_account_id")
+                                        )
+                                        st.session_state.account_name = (
+                                            account_data.get("name")
+                                        )
+                                        st.session_state.broker_name = account_data.get(
+                                            "broker_name"
+                                        )
+                                        st.session_state.broker_investor_id = (
+                                            account_data.get("broker_investor_id")
+                                        )
+
                                 st.success("✅ Login successful!")
                                 time.sleep(1)
                                 st.rerun()
+                            else:
+                                # Ensure authenticated is False on failed login
+                                st.session_state.authenticated = False
                     else:
                         st.error("❌ Please enter both username and password")
 

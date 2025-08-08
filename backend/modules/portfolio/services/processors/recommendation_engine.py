@@ -33,6 +33,7 @@ class RecommendationEngine:
                     quantity=0,
                     market_price=Money(Decimal("0")),
                     cost_price=Money(Decimal("0")),
+                    break_even_price=Money(Decimal("0")),
                     weight=Weight(Decimal("0")),
                 ),
             ).weight.percentage
@@ -54,6 +55,7 @@ class RecommendationEngine:
                         quantity=0,
                         market_price=Money(Decimal("0")),
                         cost_price=Money(Decimal("0")),
+                        break_even_price=Money(Decimal("0")),
                         weight=Weight(Decimal("0")),
                     ),
                 ).market_value.amount

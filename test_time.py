@@ -13,4 +13,7 @@ print(type(current_time))
 
 utcnow = datetime.datetime.now()
 print(utcnow)
+print(datetime.datetime.now(datetime.timezone.utc))
+
 print(pytz.timezone('Asia/Ho_Chi_Minh').utcoffset(utcnow))
+

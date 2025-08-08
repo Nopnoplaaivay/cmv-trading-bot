@@ -11,6 +11,20 @@ from backend.modules.portfolio.handlers import accounts_router
 from backend.modules.portfolio.services import AccountsService
 
 
+@accounts_router.get("/default", dependencies=[Depends(auth_guard)])
+async def get_default_account(
+    user: JwtPayload = Depends(UserPayload)
+):
+    account = await AccountsService.get_default_account(user=user)
+    response = SuccessResponse(
+        http_code=200,
+        status_code=200,
+        message=MessageConsts.SUCCESS,
+        data=account,
+    )
+    return JSONResponse(status_code=response.http_code, content=response.to_dict())
+
+
 @accounts_router.post("/setup", dependencies=[Depends(auth_guard)])
 async def setup_dnse_account(
     payload: SetupDNSEAccountDTO, user: JwtPayload = Depends(UserPayload)

@@ -1,8 +1,3 @@
-"""
-CSS styles for CMV Trading Bot frontend
-"""
-
-# Advanced CSS styling
 MAIN_CSS = """
 <style>
     .main-header {

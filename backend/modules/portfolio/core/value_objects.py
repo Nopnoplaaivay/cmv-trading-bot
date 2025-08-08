@@ -46,7 +46,10 @@ class Position:
     quantity: int
     market_price: Money
     cost_price: Money
+    break_even_price: Money 
     weight: Weight
+    weight_over_sv: Weight = None 
+    realized_profit: Money = None
     unrealized_profit: Money = None
 
     @property
@@ -60,8 +63,13 @@ class Position:
             "quantity": self.quantity,
             "market_price": self.market_price.to_dict(),
             "cost_price": self.cost_price.to_dict(),
+            "break_even_price": self.break_even_price.to_dict(),
             "weight": self.weight.to_dict(),
+            "weight_over_sv": self.weight_over_sv.to_dict(),
             "market_value": self.market_value.to_dict(),
+            "realized_profit": (
+                self.realized_profit.to_dict() if self.realized_profit else None
+            ),
             "unrealized_profit": (
                 self.unrealized_profit.to_dict() if self.unrealized_profit else None
             ),

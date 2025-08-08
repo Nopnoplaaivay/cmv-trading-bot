@@ -23,7 +23,7 @@ class CommonConsts:
     SALT = os.getenv("SALT")
     AT_SECRET_KEY = os.getenv("AT_SECRET_KEY")
     RT_SECRET_KEY = os.getenv("RT_SECRET_KEY")
-    ACCESS_TOKEN_EXPIRES_IN = 3600
+    ACCESS_TOKEN_EXPIRES_IN = 3600 * 8  # 8 hours
     REFRESH_TOKEN_EXPIRES_IN = 86400
 
     DEBUG = os.getenv("DEBUG") 

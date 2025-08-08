@@ -1,3 +1,2 @@
-"""
-Frontend module for CMV Trading Bot
-"""
+from dotenv import load_dotenv
+load_dotenv(".env")

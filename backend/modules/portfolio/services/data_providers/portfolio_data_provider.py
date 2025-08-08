@@ -42,10 +42,7 @@ class PortfolioDataProvider:
                                 "symbol": symbol,
                                 "marketPrice": float(record[OptimizedWeights.marketPrice.name]),
                                 "weight": float(
-                                    min(
-                                        initial_weight_pct,
-                                        TradingConsts.LIMIT_WEIGHT_PCT,
-                                    )
+                                    initial_weight_pct
                                 ),
                             }
                         )

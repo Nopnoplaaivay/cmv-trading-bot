@@ -1,6 +1,12 @@
 import time
 import pandas as pd
 import numpy as np
+import warnings
+warnings.filterwarnings(
+    "ignore",
+    message=".*Downcasting behavior in `replace` is deprecated.*",
+    category=FutureWarning
+)
 from scipy.stats import rankdata
 
 from backend.common.consts import SQLServerConsts
@@ -33,6 +39,8 @@ class UniverseTopMonthlyService(BaseMonthlyService):
                 SELECT * FROM UncommittedData
                 ORDER BY [ticker];
             """
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
             conn = lake_session.connection().connection
             df_stock_0 = pd.read_sql_query(sql_query_0, conn)
         with mart_session_scope() as mart_session:
@@ -88,14 +96,16 @@ class UniverseTopMonthlyService(BaseMonthlyService):
                 where rn = 1
                 ORDER BY ticker;
             """
-            conn = mart_session.connection().connection
-            df_stock_1 = pd.read_sql_query(sql_query_1, conn)
-            df_stock_2 = pd.read_sql_query(sql_query_2, conn)
-            df_sector = pd.read_sql_query(sql_query_3, conn)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                conn = mart_session.connection().connection
+                df_stock_1 = pd.read_sql_query(sql_query_1, conn)
+                df_stock_2 = pd.read_sql_query(sql_query_2, conn)
+                df_sector = pd.read_sql_query(sql_query_3, conn)
 
-            df_stock_1 = df_stock_1.drop(columns=["rn"], errors="ignore")
-            df_stock_2 = df_stock_2.drop(columns=["rn"], errors="ignore")
-            df_sector = df_sector.drop(columns=["rn"], errors="ignore")
+                df_stock_1 = df_stock_1.drop(columns=["rn"], errors="ignore")
+                df_stock_2 = df_stock_2.drop(columns=["rn"], errors="ignore")
+                df_sector = df_sector.drop(columns=["rn"], errors="ignore")
 
             df_stock_2["cap"] = df_stock_2.groupby(["ticker"], group_keys=False)[
                 "cap"
@@ -199,6 +209,7 @@ class UniverseTopMonthlyService(BaseMonthlyService):
         df_filtered = df_filtered.replace(
             {np.inf: np.nan, -np.inf: np.nan}
         ).infer_objects(copy=False)
+
 
         df_filtered = df_filtered.sort_values(
             by=["year", "month", "symbol"]

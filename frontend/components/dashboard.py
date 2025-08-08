@@ -1,7 +1,3 @@
-"""
-Main dashboard component for CMV Trading Bot frontend
-"""
-
 import streamlit as st
 from ..components.sidebar import render_sidebar
 from ..pages.portfolio_analysis import portfolio_analysis_page
@@ -17,13 +13,11 @@ def render_dashboard():
         unsafe_allow_html=True,
     )
 
-    # Sidebar controls
     render_sidebar()
 
-    # Main content based on sidebar selection
     if "current_page" not in st.session_state:
         st.session_state.current_page = "Portfolio Analysis"
-
+        
     if st.session_state.current_page == "Portfolio Analysis":
         portfolio_analysis_page()
     elif st.session_state.current_page == "Trade Execution":

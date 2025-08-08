@@ -1,7 +1,3 @@
-"""
-Portfolio analysis page for CMV Trading Bot frontend
-"""
-
 import streamlit as st
 from datetime import datetime
 from ..services.api import get_portfolio_analysis, send_portfolio_notification
@@ -15,28 +11,49 @@ from ..utils.helpers import format_currency
 
 
 def portfolio_analysis_page():
-    """Portfolio analysis main page"""
     if not st.session_state.get("broker_account_id"):
-        st.warning(
-            "👈 Please enter your broker account ID in the sidebar to view portfolio analysis"
-        )
+        st.warning("⚠️ No broker account information available. Please check the Account Information section in the sidebar.")
+        st.info("💡 If you just logged in, try refreshing the account information from the sidebar.")
         return
 
-    # Auto-refresh logic
-    if st.session_state.get("auto_refresh", False):
-        if (
-            "last_refresh" not in st.session_state
-            or (datetime.now() - st.session_state.last_refresh).seconds > 30
-        ):
-            st.session_state.last_refresh = datetime.now()
-            st.rerun()
+    # Auto-refresh logic - only refresh if enough time has passed and user is authenticated
+    # IMPORTANT: Only trigger auto-refresh if all conditions are met and we're not in a refresh loop
+    if (
+        st.session_state.get("auto_refresh", False)
+        and st.session_state.get("authenticated", False)
+        and st.session_state.get("broker_account_id")
+    ):
 
-    # Get portfolio data
+        current_time = datetime.now()
+        last_refresh = st.session_state.get("last_refresh")
+
+        if last_refresh is None or (current_time - last_refresh).total_seconds() >= 30:
+            st.session_state.last_refresh = current_time
+            get_portfolio_analysis.clear()
+            st.info("🔄 Auto-refreshing data...")
+
     with st.spinner("📊 Loading portfolio analysis..."):
+        debug_mode = st.session_state.get("debug_mode", False)
+        if debug_mode:
+            st.sidebar.caption(
+                f"📡 Calling API with account: {st.session_state.broker_account_id}"
+            )
+            st.sidebar.caption(
+                f"🔐 Has token: {bool(st.session_state.get('auth_token'))}"
+            )
+
         analysis_data = get_portfolio_analysis(
             st.session_state.broker_account_id,
             st.session_state.get("strategy_type", "market_neutral"),
         )
+
+        # Debug: Track result
+        if debug_mode:
+            st.sidebar.caption(f"📊 API returned: {bool(analysis_data)}")
+            if analysis_data:
+                st.sidebar.caption(
+                    f"📈 Data keys: {list(analysis_data.keys()) if isinstance(analysis_data, dict) else 'Not dict'}"
+                )
 
     if not analysis_data:
         st.error(
@@ -44,10 +61,8 @@ def portfolio_analysis_page():
         )
         return
 
-    # Display portfolio analysis
     display_portfolio_summary(analysis_data)
 
-    # Create tabs for different views
     tab1, tab2, tab3, tab4 = st.tabs(
         ["📊 Current Positions", "🎯 Recommendations", "📈 Performance", "⚙️ Settings"]
     )
