@@ -37,6 +37,27 @@ async def get_my_portfolios(user: JwtPayload = Depends(UserPayload)):
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
 
 
+@portfolio_router.get("/symbols", dependencies=[Depends(auth_guard)])
+async def get_available_symbols(user: JwtPayload = Depends(UserPayload)):
+    available_symbols = await PortfoliosService.get_available_symbols()
+    if not available_symbols:
+        response = BaseResponse(
+            http_code=404,
+            status_code=404,
+            message=MessageConsts.NOT_FOUND,
+            errors="No available symbols found",
+        )
+        return JSONResponse(status_code=response.http_code, content=response.to_dict())
+    
+    response = SuccessResponse(
+        http_code=200,
+        status_code=200,
+        message=MessageConsts.SUCCESS,
+        data=available_symbols,
+    )
+    return JSONResponse(status_code=response.http_code, content=response.to_dict())
+
+
 @portfolio_router.get("/{portfolio_id}", dependencies=[Depends(auth_guard)])
 async def get_portfolio_by_id(
     portfolio_id: str, user: JwtPayload = Depends(UserPayload)

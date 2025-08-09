@@ -8,7 +8,7 @@ from backend.utils.jwt_utils import JWTUtils
 def render_login_page():
     """Render login page"""
     st.markdown(
-        '<div class="main-header"><h1>🔐 CMV Trading Bot</h1><p>Professional Portfolio Management System</p></div>',
+        '<div class="main-header"><h1>🔐 CMV Portfolio Management Website</h1><p>Professional Portfolio Management System</p></div>',
         unsafe_allow_html=True,
     )
 

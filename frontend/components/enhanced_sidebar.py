@@ -1,7 +1,7 @@
 import streamlit as st
 
 from frontend.components.portfolio_quick_stats import render_portfolio_quick_stats
-
+from frontend.components.portfolio_management import render_portfolio_selector
 
 def render_enhanced_sidebar():
     with st.sidebar:
@@ -28,7 +28,7 @@ def render_enhanced_sidebar():
         # Portfolio Selection (only show on analysis page)
         if selected_page == "Portfolio Analysis":
             st.markdown("### 📊 Portfolio Selection")
-            # render_portfolio_selector()
+            render_portfolio_selector()
 
         # Account Configuration
         st.markdown("### ⚙️ Account Settings")

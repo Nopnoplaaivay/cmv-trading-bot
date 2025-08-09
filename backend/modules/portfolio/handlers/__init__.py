@@ -4,6 +4,7 @@ from .portfolio import (
     create_custom_portfolio,
     send_portfolio_report_notification,
     get_portfolio_by_id,
-    get_my_portfolios
+    get_my_portfolios,
+    get_available_symbols
 )
 from .accounts import setup_dnse_account, get_default_account

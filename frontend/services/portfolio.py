@@ -14,8 +14,8 @@ class PortfolioService:
                 f"{API_BASE_URL}/portfolio-service/custom",
                 json={
                     "portfolio_name": portfolio_name,
-                    "symbols": symbols,
-                    "description": description
+                    "portfolio_desc": description,
+                    "symbols": symbols
                 },
                 headers=get_auth_headers(),
                 timeout=30,
@@ -128,6 +128,38 @@ class PortfolioService:
             st.error(f"Network error: {str(e)}")
             return None
 
+    @staticmethod
+    @st.cache_data(ttl=300)  # Cache for 5 minutes
+    def get_all_symbols() -> List[str]:
+        """Search for stock symbols (mock implementation)"""
+        # In real implementation, this would call an API to search symbols
+        vietnam_symbols = [
+            "VIC", "VHM", "VRE", "TCB", "VCB", "BID", "CTG", "MBB",
+            "HPG", "MSN", "VNM", "SAB", "GAS", "PLX", "POW", "REE",
+            "GMD", "DXG", "KDH", "NVL", "PDR", "STB", "TPB", "ACB",
+            "EIB", "HDB", "LPB", "NAB", "OCB", "SHB", "SSB", "VIB",
+            "APG", "BCM", "BVH", "CII", "DGC", "FPT", "GEX", "HNG",
+            "IDI", "IJC", "KBC", "MWG", "NLG", "PNJ", "ROS", "SSI"
+        ]
+
+        try:
+            response = requests.get(
+                f"{API_BASE_URL}/portfolio-service/symbols",
+                headers=get_auth_headers(),
+                timeout=30,
+            )
+
+            if response.status_code == 200:
+                return response.json().get("data").get("records", [])
+            elif handle_auth_error(response):
+                return vietnam_symbols
+            else:
+                st.error(f"Failed to get analysis: {response.json().get('message')}")
+                return vietnam_symbols
+
+        except requests.exceptions.RequestException as e:
+            st.error(f"Network error: {str(e)}")
+            return None
 
 #     @staticmethod
 #     def update_portfolio_symbols(portfolio_id: str, symbols: List[str]) -> Dict:

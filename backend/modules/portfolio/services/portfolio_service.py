@@ -162,7 +162,7 @@ class PortfoliosService(BaseDailyService):
                 record={
                     PortfolioMetadata.portfolioId.name: portfolio_id,
                     PortfolioMetadata.userId.name: user_id,
-                    PortfolioMetadata.name.name: portfolio_name,
+                    PortfolioMetadata.portfolioName.name: portfolio_name,
                     PortfolioMetadata.portfolioType.name: "Custom",
                     PortfolioMetadata.portfolioDesc.name: portfolio_desc,
                     PortfolioMetadata.algorithm.name: "CMV"
@@ -179,38 +179,6 @@ class PortfoliosService(BaseDailyService):
             session.commit()
 
         return portfolio_id
-
-    @classmethod
-    async def validate_symbols(
-        cls, symbols: List[str], df_stock_pivoted: pd.DataFrame
-    ) -> None:
-        """Validate that all symbols exist in the database."""
-        if df_stock_pivoted.empty:
-            raise BaseExceptionResponse(
-                http_code=404,
-                status_code=404,
-                message=MessageConsts.NOT_FOUND,
-                errors="No stock data available",
-            )
-
-        available_symbols = df_stock_pivoted.columns.tolist()
-
-        try:
-            for symbol in symbols:
-                if symbol not in available_symbols:
-                    raise BaseExceptionResponse(
-                        http_code=404,
-                        status_code=404,
-                        message=MessageConsts.BAD_REQUEST,
-                        errors=f"Symbol {symbol} not found in available stock data",
-                    )
-        except ValidationError as e:
-            raise BaseExceptionResponse(
-                http_code=400,
-                status_code=400,
-                message=MessageConsts.BAD_REQUEST,
-                errors=str(e),
-            )
 
     @classmethod
     async def get_portfolio_by_id(cls, portfolio_id: str, user: JwtPayload) -> pd.DataFrame:
@@ -298,6 +266,7 @@ class PortfoliosService(BaseDailyService):
             )
             if portfolio_metadata:
                 portfolios.append({
+                    "portfolioId": portfolio_id,
                     "metadata": portfolio_metadata,
                     "records": [
                         port for port in portfolios_records if port[Portfolios.portfolioId.name] == portfolio_id
@@ -305,3 +274,52 @@ class PortfoliosService(BaseDailyService):
                 })
 
         return {"portfolios": portfolios}
+
+    @classmethod
+    async def get_available_symbols(cls) -> pd.DataFrame:
+        """Get available stocks from the database."""
+        df_stock_pivoted = await PriceDataProvider.get_price_data_pivoted()
+        # df_stock_pivoted = df_stock_pivoted.dropna(axis=1, how="all")
+        if df_stock_pivoted.empty:
+            raise BaseExceptionResponse(
+                http_code=404,
+                status_code=404,
+                message=MessageConsts.NOT_FOUND,
+                errors="No stock data available",
+            )
+
+        available_symbols = df_stock_pivoted.columns.tolist()
+
+        return {"records": available_symbols}
+
+    @classmethod
+    async def validate_symbols(
+        cls, symbols: List[str], df_stock_pivoted: pd.DataFrame
+    ) -> None:
+        """Validate that all symbols exist in the database."""
+        if df_stock_pivoted.empty:
+            raise BaseExceptionResponse(
+                http_code=404,
+                status_code=404,
+                message=MessageConsts.NOT_FOUND,
+                errors="No stock data available",
+            )
+
+        available_symbols = df_stock_pivoted.columns.tolist()
+
+        try:
+            for symbol in symbols:
+                if symbol not in available_symbols:
+                    raise BaseExceptionResponse(
+                        http_code=404,
+                        status_code=404,
+                        message=MessageConsts.BAD_REQUEST,
+                        errors=f"Symbol {symbol} not found in available stock data",
+                    )
+        except ValidationError as e:
+            raise BaseExceptionResponse(
+                http_code=400,
+                status_code=400,
+                message=MessageConsts.BAD_REQUEST,
+                errors=str(e),
+            )

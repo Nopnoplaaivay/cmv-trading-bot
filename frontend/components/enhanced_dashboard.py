@@ -20,19 +20,19 @@ def render_enhanced_dashboard():
     # Main content routing
     page = st.session_state.get("current_page", "Portfolio Analysis")
     
-#     if page == "Portfolio Analysis":
-#         render_enhanced_portfolio_analysis()
-#     elif page == "Portfolio Management":
-#         render_portfolio_management_page()
-#     elif page == "Trade Execution":
-#         from ..pages.trade_execution import trade_execution_page
-#         trade_execution_page()
-#     elif page == "Order History":
-#         from ..pages.order_history import order_history_page
-#         order_history_page()
-#     elif page == "Account Management":
-#         from ..pages.account_management import account_management_page
-#         account_management_page()
+    if page == "Portfolio Analysis":
+        render_enhanced_portfolio_analysis()
+    elif page == "Portfolio Management":
+        render_portfolio_management_page()
+    elif page == "Trade Execution":
+        from ..pages.trade_execution import trade_execution_page
+        trade_execution_page()
+    elif page == "Order History":
+        from ..pages.order_history import order_history_page
+        order_history_page()
+    elif page == "Account Management":
+        from ..pages.account_management import account_management_page
+        account_management_page()
 
 
 # def render_enhanced_sidebar():
