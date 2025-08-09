@@ -1,28 +1,24 @@
-# # frontend/components/enhanced_dashboard.py
-# """
-# Enhanced dashboard with portfolio management
-# """
 
-# import streamlit as st
-# from .portfolio_management import (
-#     render_portfolio_management_page,
-#     render_enhanced_portfolio_analysis,
-#     render_portfolio_selector
-# )
+import streamlit as st
+from .portfolio_management import (
+    render_portfolio_management_page,
+    render_enhanced_portfolio_analysis,
+    render_portfolio_selector
+)
 
 
-# def render_enhanced_dashboard():
-#     """Enhanced dashboard with portfolio support"""
-#     st.markdown(
-#         '<div class="main-header"><h1>📈 CMV Trading Bot Dashboard</h1><p>Advanced Portfolio Management & Trading</p></div>',
-#         unsafe_allow_html=True,
-#     )
+def render_enhanced_dashboard():
+    """Enhanced dashboard with portfolio support"""
+    st.markdown(
+        '<div class="main-header"><h1>📈 CMV Trading Bot Dashboard</h1><p>Advanced Portfolio Management & Trading</p></div>',
+        unsafe_allow_html=True,
+    )
 
-#     # Enhanced sidebar
-#     render_enhanced_sidebar()
+    # Enhanced sidebar
+    render_enhanced_sidebar()
 
-#     # Main content routing
-#     page = st.session_state.get("current_page", "Portfolio Analysis")
+    # Main content routing
+    page = st.session_state.get("current_page", "Portfolio Analysis")
     
 #     if page == "Portfolio Analysis":
 #         render_enhanced_portfolio_analysis()
@@ -39,67 +35,6 @@
 #         account_management_page()
 
 
-# def render_enhanced_sidebar():
-#     """Enhanced sidebar with portfolio features"""
-#     with st.sidebar:
-#         st.markdown(f"### 👋 Welcome, {st.session_state.get('username', 'User')}!")
-
-#         # Navigation
-#         st.markdown("### 🧭 Navigation")
-#         pages = [
-#             "Portfolio Analysis",
-#             "Portfolio Management",  # New page
-#             "Trade Execution",
-#             "Order History",
-#             "Account Management",
-#         ]
-        
-#         selected_page = st.selectbox(
-#             "Go to",
-#             pages,
-#             index=pages.index(st.session_state.get("current_page", "Portfolio Analysis")),
-#         )
-#         st.session_state.current_page = selected_page
-
-#         st.divider()
-
-#         # Portfolio Selection (only show on analysis page)
-#         if selected_page == "Portfolio Analysis":
-#             st.markdown("### 📊 Portfolio Selection")
-#             render_portfolio_selector()
-
-#         # Account Configuration
-#         st.markdown("### ⚙️ Account Settings")
-        
-#         # Broker Account ID
-#         broker_account_id = st.text_input(
-#             "🏦 Broker Account ID",
-#             value=st.session_state.get("broker_account_id", ""),
-#             placeholder="Enter your account ID",
-#         )
-#         if broker_account_id:
-#             st.session_state.broker_account_id = broker_account_id
-
-#         # Strategy Selection
-#         strategy_type = st.selectbox(
-#             "📊 Trading Strategy",
-#             ["market_neutral", "long_only"],
-#             index=(
-#                 0 if st.session_state.get("strategy_type", "market_neutral") == "market_neutral" else 1
-#             ),
-#         )
-#         st.session_state.strategy_type = strategy_type
-
-#         st.divider()
-
-#         # Portfolio Quick Stats
-#         if selected_page == "Portfolio Analysis":
-#             render_portfolio_quick_stats()
-
-#         # Rest of sidebar (existing code)
-#         render_quick_actions()
-#         render_system_status()
-#         render_logout_button()
 
 
 # def render_portfolio_quick_stats():

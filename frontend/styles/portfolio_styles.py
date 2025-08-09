@@ -447,6 +447,19 @@ ENHANCED_MAIN_CSS = (
    .sidebar .sidebar-content {
        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
    }
+    .sidebar-section {
+        margin-bottom: 1rem;
+    }
+    
+    .compact-input {
+        margin-bottom: 0.5rem;
+    }
+    
+    .sidebar .stExpander {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+    }
    
    /* Alert Boxes */
    .alert-success {

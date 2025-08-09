@@ -3,6 +3,7 @@ from typing import Optional, Dict
 from backend.common.consts import TradingConsts
 from backend.modules.portfolio.repositories import PortfoliosRepo
 from backend.modules.portfolio.entities import Portfolios
+from backend.modules.portfolio.utils.portfolio_utils import PortfolioUtils
 from backend.utils.logger import LOGGER
 
 
@@ -10,18 +11,20 @@ class PortfolioDataProvider:
     repo = PortfoliosRepo
 
     @classmethod
-    async def get_portfolio_weights(
+    async def get_system_portfolio(
         cls, last_trading_date: str, next_trading_date: str
     ) -> Optional[Dict]:
         try:
             with cls.repo.session_scope() as session:
-                conditions = {Portfolios.date.name: last_trading_date}
+                portfolio_id = PortfolioUtils.generate_general_portfolio_id(date=last_trading_date)
+
+                conditions = {
+                    Portfolios.portfolioId.name: portfolio_id,
+                    Portfolios.date.name: last_trading_date
+                }
                 records = await cls.repo.get_by_condition(conditions=conditions)
 
                 if not records:
-                    LOGGER.warning(
-                        f"No portfolio data found for date: {last_trading_date}"
-                    )
                     return None
 
                 long_only_positions = []

@@ -50,7 +50,7 @@ class PortfolioNotificationService:
                 return False
 
             # Get portfolio data
-            portfolio_data = await cls.portfolio_data_provider.get_portfolio_weights(
+            portfolio_data = await cls.portfolio_data_provider.get_system_portfolio(
                 last_trading_date_str, next_trading_date_str
             )
 
@@ -106,7 +106,7 @@ class PortfolioNotificationService:
                 await notification_service.initialize()
 
             # Get and send portfolio data
-            portfolio_data = await cls.portfolio_data_provider.get_portfolio_weights(
+            portfolio_data = await cls.portfolio_data_provider.get_system_portfolio(
                 last_trading_date=last_trading_date_str,
                 next_trading_date=next_trading_date_str,
             )

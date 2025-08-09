@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 
 def test():
     with backend_session_scope() as session:
-
         sql = """
             SELECT [id]
                 ,[date]

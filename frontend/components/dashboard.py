@@ -1,9 +1,9 @@
 import streamlit as st
-from ..components.sidebar import render_sidebar
-from ..pages.portfolio_analysis import portfolio_analysis_page
-from ..pages.trade_execution import trade_execution_page
-from ..pages.order_history import order_history_page
-from ..pages.account_management import account_management_page
+from frontend.components.enhanced_sidebar import render_enhanced_sidebar
+from frontend.pages.portfolio_analysis import portfolio_analysis_page
+from frontend.pages.trade_execution import trade_execution_page
+from frontend.pages.order_history import order_history_page
+from frontend.pages.account_management import account_management_page
 
 
 def render_dashboard():
@@ -13,7 +13,7 @@ def render_dashboard():
         unsafe_allow_html=True,
     )
 
-    render_sidebar()
+    render_enhanced_sidebar()
 
     if "current_page" not in st.session_state:
         st.session_state.current_page = "Portfolio Analysis"

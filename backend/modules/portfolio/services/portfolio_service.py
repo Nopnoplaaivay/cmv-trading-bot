@@ -271,7 +271,6 @@ class PortfoliosService(BaseDailyService):
 
                 SELECT *
                 FROM UncommittedData
-
             """
 
             with warnings.catch_warnings():

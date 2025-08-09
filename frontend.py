@@ -21,10 +21,6 @@ from frontend.components.dashboard import render_dashboard
 # Apply CSS styles
 st.markdown(ENHANCED_MAIN_CSS, unsafe_allow_html=True)
 
-
-
-
-
 def main():
     """Main application entry point"""
     # Initialize session state
@@ -38,9 +34,6 @@ def main():
 
     # Add footer
     render_footer()
-
-
-
 
 if __name__ == "__main__":
     main()

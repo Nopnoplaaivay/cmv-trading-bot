@@ -29,6 +29,7 @@ class TradingCalendarService:
         if not cls.is_trading_day(current_date):
             last_trading_date = cls.get_last_trading_date(current_date)
             next_trading_date = cls.get_next_trading_date(current_date)
+            return last_trading_date, next_trading_date
 
         current_hour = current_date.hour
         if current_hour >= 17:

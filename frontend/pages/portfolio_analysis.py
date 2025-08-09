@@ -1,7 +1,7 @@
 import streamlit as st
 from datetime import datetime
-from ..services.api import get_portfolio_analysis, send_portfolio_notification
-from ..components.portfolio import (
+from frontend.services.portfolio import PortfolioService
+from frontend.components.portfolio import (
     display_portfolio_summary,
     display_current_positions,
     display_weight_comparison_chart,
@@ -29,7 +29,7 @@ def portfolio_analysis_page():
 
         if last_refresh is None or (current_time - last_refresh).total_seconds() >= 30:
             st.session_state.last_refresh = current_time
-            get_portfolio_analysis.clear()
+            PortfolioService.get_portfolio_analysis.clear()
             st.info("🔄 Auto-refreshing data...")
 
     with st.spinner("📊 Loading portfolio analysis..."):
@@ -42,7 +42,7 @@ def portfolio_analysis_page():
                 f"🔐 Has token: {bool(st.session_state.get('auth_token'))}"
             )
 
-        analysis_data = get_portfolio_analysis(
+        analysis_data = PortfolioService.get_portfolio_analysis(
             st.session_state.broker_account_id,
             st.session_state.get("strategy_type", "market_neutral"),
         )
@@ -192,18 +192,18 @@ def display_analysis_settings():
         )
 
         # Send test notification
-        if st.button("Send Test Notification", use_container_width=True):
-            if st.session_state.get("broker_account_id"):
-                success = send_portfolio_notification(
-                    st.session_state.broker_account_id,
-                    st.session_state.get("strategy_type", "market_neutral"),
-                )
-                if success:
-                    st.success("Test notification sent!")
-                else:
-                    st.error("Failed to send notification")
-            else:
-                st.error("Please set broker account ID first")
+        # if st.button("Send Test Notification", use_container_width=True):
+        #     if st.session_state.get("broker_account_id"):
+        #         success = send_portfolio_notification(
+        #             st.session_state.broker_account_id,
+        #             st.session_state.get("strategy_type", "market_neutral"),
+        #         )
+        #         if success:
+        #             st.success("Test notification sent!")
+        #         else:
+        #             st.error("Failed to send notification")
+        #     else:
+        #         st.error("Please set broker account ID first")
 
     # Save settings button
     if st.button("💾 Save Settings", use_container_width=True, type="primary"):

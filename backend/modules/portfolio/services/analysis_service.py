@@ -117,7 +117,7 @@ class PortfolioAnalysisService:
                     )
 
                     portfolio_data = (
-                        await cls.portfolio_data_provider.get_portfolio_weights(
+                        await cls.portfolio_data_provider.get_system_portfolio(
                             last_trading_date=last_trading_date_str,
                             next_trading_date=next_trading_date_str,
                         )
