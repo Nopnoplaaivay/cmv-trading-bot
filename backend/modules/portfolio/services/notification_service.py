@@ -22,16 +22,24 @@ class PortfolioNotificationService:
     @classmethod
     async def send_daily_portfolio_notification(cls):
         try:
-            last_trading_date, next_trading_date = cls.trading_calendar.get_last_next_trading_dates()
+            last_trading_date, next_trading_date = (
+                cls.trading_calendar.get_last_next_trading_dates()
+            )
             if not last_trading_date or not next_trading_date:
                 LOGGER.warning(
                     "No trading dates found. Cannot proceed with portfolio analysis."
                 )
                 return False
-            next_trading_date_str = next_trading_date.strftime(SQLServerConsts.DATE_FORMAT)
-            last_trading_date_str = last_trading_date.strftime(SQLServerConsts.DATE_FORMAT)
+            next_trading_date_str = next_trading_date.strftime(
+                SQLServerConsts.DATE_FORMAT
+            )
+            last_trading_date_str = last_trading_date.strftime(
+                SQLServerConsts.DATE_FORMAT
+            )
 
-            LOGGER.info(f"Sending daily portfolio notification for {next_trading_date_str}")
+            LOGGER.info(
+                f"Sending daily portfolio notification for {next_trading_date_str}"
+            )
 
             # Initialize notification service
             if not notification_service.is_ready():
@@ -70,18 +78,26 @@ class PortfolioNotificationService:
             current_date = TimeUtils.get_current_vn_time()
 
             if not cls.trading_calendar.is_trading_day(current_date):
-                LOGGER.info(f"Today ({current_date.strftime('%A %d/%m/%Y')}) is not a trading day. Skipping notification.")
+                LOGGER.info(
+                    f"Today ({current_date.strftime('%A %d/%m/%Y')}) is not a trading day. Skipping notification."
+                )
                 return
-            
+
             current_hour = current_date.hour
             if current_hour >= 18:
                 last_trading_date = current_date
             else:
-                last_trading_date = cls.trading_calendar.get_last_trading_date(current_date)
-            
+                last_trading_date = cls.trading_calendar.get_last_trading_date(
+                    current_date
+                )
+
             next_trading_date = cls.trading_calendar.get_next_trading_date(current_date)
-            next_trading_date_str = next_trading_date.strftime(SQLServerConsts.DATE_FORMAT)
-            last_trading_date_str = last_trading_date.strftime(SQLServerConsts.DATE_FORMAT)
+            next_trading_date_str = next_trading_date.strftime(
+                SQLServerConsts.DATE_FORMAT
+            )
+            last_trading_date_str = last_trading_date.strftime(
+                SQLServerConsts.DATE_FORMAT
+            )
 
             LOGGER.info(f"Sending test portfolio notification for {date}")
 
@@ -91,7 +107,8 @@ class PortfolioNotificationService:
 
             # Get and send portfolio data
             portfolio_data = await cls.portfolio_data_provider.get_portfolio_weights(
-                last_trading_date=last_trading_date_str, next_trading_date=next_trading_date_str
+                last_trading_date=last_trading_date_str,
+                next_trading_date=next_trading_date_str,
             )
 
             if portfolio_data:
@@ -132,12 +149,14 @@ class PortfolioNotificationService:
                 return False
 
             # Generate portfolio analysis
-            analysis_result = await PortfolioAnalysisService.analyze_portfolio(
+            analysis_result = await PortfolioAnalysisService.analyze_system_portfolio(
                 broker_account_id=broker_account_id, strategy_type=strategy_type
             )
 
             if not analysis_result:
-                error_msg = f"Không thể phân tích portfolio cho tài khoản {broker_account_id}"
+                error_msg = (
+                    f"Không thể phân tích portfolio cho tài khoản {broker_account_id}"
+                )
                 LOGGER.warning(error_msg)
                 await notify_error("PORTFOLIO ANALYSIS ERROR", error_msg)
                 return False

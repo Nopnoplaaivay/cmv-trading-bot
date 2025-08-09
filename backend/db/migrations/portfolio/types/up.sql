@@ -117,14 +117,11 @@ CREATE TYPE [BotPortfolio].[portfolios] AS TABLE(
     [date] VARCHAR(10),
     [symbol] VARCHAR(10),
     [portfolioId] VARCHAR(50),
-    [portfolioType] VARCHAR(50),
-    [userId] INT,
     [marketPrice] FLOAT,
     [initialWeight] FLOAT NOT NULL,
     [neutralizedWeight] FLOAT,
     [limitedWeight] FLOAT,
     [neutralizedLimitedWeight] FLOAT,
-    [algorithm] VARCHAR(50) DEFAULT 'CMV',
     [__createdAt__] VARCHAR(19),
     [__updatedAt__] VARCHAR(19)
 );
@@ -132,16 +129,17 @@ GO
 
 
 CREATE TYPE [BotPortfolio].[portfolioMetadata] AS TABLE (
-    portfolioId NVARCHAR(50) PRIMARY KEY,
-    userId INT NOT NULL,
-    name NVARCHAR(100),
-    description NVARCHAR(500),
-    isActive BIT DEFAULT 1,
+    [portfolioId] NVARCHAR(50),
+    [userId] INT NOT NULL,
+    [portfolioName] NVARCHAR(100) NOT NULL,
+    [portfolioType] VARCHAR(50),
+    [portfolioDesc] NVARCHAR(500),
+    [algorithm] VARCHAR(50),
+    [isActive] BIT DEFAULT 1,
     [__createdAt__] VARCHAR(19),
     [__updatedAt__] VARCHAR(19)
 );
 GO
-
 
 
 CREATE TYPE [BotPortfolio].[stocksUniverse] AS TABLE(

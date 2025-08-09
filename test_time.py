@@ -45,6 +45,12 @@ async def test_update_portfolio_weights():
     print("Portfolio weights updated successfully.")
 
 
+def test():
+    unique_portfolio_ids = ["CUSTOM-3-PhuNgu-20b9a2cc", "CUSTOM-3-PhuOcCho-50fbf756"]
+    portfolio_ids_string = "'" + "','".join(unique_portfolio_ids) + "'"
+    print(portfolio_ids_string)
+
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(test_update_portfolio_weights())
+    # asyncio.run(test_update_portfolio_weights())
+    test()

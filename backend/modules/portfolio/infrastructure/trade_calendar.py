@@ -27,9 +27,9 @@ class TradingCalendarService:
         current_date = TimeUtils.get_current_vn_time()
 
         if not cls.is_trading_day(current_date):
-            LOGGER.info(f"Today ({current_date.strftime('%A %d/%m/%Y')}) is not a trading day. Skipping notification.")
-            return None, None
-        
+            last_trading_date = cls.get_last_trading_date(current_date)
+            next_trading_date = cls.get_next_trading_date(current_date)
+
         current_hour = current_date.hour
         if current_hour >= 17:
             last_trading_date = current_date

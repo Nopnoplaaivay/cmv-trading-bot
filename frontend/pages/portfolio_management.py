@@ -1,18 +1,13 @@
-# # frontend/pages/portfolio_management_page.py
-# """
-# Dedicated portfolio management page
-# """
-
-# import streamlit as st
-# import time
-# from datetime import datetime
-# from ..components.portfolio_management import (
-#     render_portfolio_list,
-#     render_create_portfolio_form,
-#     render_portfolio_settings,
-#     render_portfolio_comparison
-# )
-# from ..services.portfolio_service import PortfolioService
+import streamlit as st
+import time
+from datetime import datetime
+from ..components.portfolio_management import (
+    render_portfolio_list,
+    render_create_portfolio_form,
+    render_portfolio_settings,
+    render_portfolio_comparison
+)
+from frontend.services.portfolio import PortfolioService
 
 
 # def portfolio_management_page():

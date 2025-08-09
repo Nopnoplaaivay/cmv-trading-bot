@@ -29,7 +29,7 @@ class PortfolioAnalysisService:
     trading_calendar = TradingCalendarService
 
     @classmethod
-    async def analyze_portfolio(
+    async def analyze_system_portfolio(
         cls,
         broker_account_id: str,
         strategy_type: str = "market_neutral",
@@ -50,7 +50,6 @@ class PortfolioAnalysisService:
             custody_code = trade_account.get("custodyCode")
             password = trade_account.get("password")
 
-            # Authenticate and get current portfolio data
             async with TradingSession(account=custody_code) as session:
                 if not await session.authenticate(password=password):
                     raise BaseExceptionResponse(
@@ -61,51 +60,73 @@ class PortfolioAnalysisService:
                     )
 
                 async with session.users_client() as users_client:
-                    balance_dict = await users_client.get_account_balance(account_no=broker_account_id)
+                    balance_dict = await users_client.get_account_balance(
+                        account_no=broker_account_id
+                    )
                     deals_dict = await users_client.get_account_deals(
                         account_no=broker_account_id
                     )
 
                     if not balance_dict:
-                        LOGGER.warning(f"No balance data found for account {broker_account_id}")
+                        LOGGER.warning(
+                            f"No balance data found for account {broker_account_id}"
+                        )
                         return None
 
                     if not deals_dict:
-                        LOGGER.warning(f"No deals data found for account {broker_account_id}")
+                        LOGGER.warning(
+                            f"No deals data found for account {broker_account_id}"
+                        )
                         return None
 
                     deals_list = deals_dict.get("deals", [])
-                    available_cash = Money(Decimal(str(balance_dict.get("availableCash", 0))))
-                    net_asset_value = Money(Decimal(str(balance_dict.get("netAssetValue", 0))))
+                    available_cash = Money(
+                        Decimal(str(balance_dict.get("availableCash", 0)))
+                    )
+                    net_asset_value = Money(
+                        Decimal(str(balance_dict.get("netAssetValue", 0)))
+                    )
                     stock_value = Money(Decimal(str(balance_dict.get("stockValue", 0))))
 
                     # Process current deals into portfolio positions
                     current_positions = PortfolioProcessor.process_deals_to_positions(
-                        deals_list, float(net_asset_value.amount), float(stock_value.amount)
+                        deals_list,
+                        float(net_asset_value.amount),
+                        float(stock_value.amount),
                     )
 
                     # Get target portfolio weights
-                    last_trading_date, next_trading_date = cls.trading_calendar.get_last_next_trading_dates()
+                    last_trading_date, next_trading_date = (
+                        cls.trading_calendar.get_last_next_trading_dates()
+                    )
                     if not last_trading_date or not next_trading_date:
                         LOGGER.warning(
                             "No trading dates found. Cannot proceed with portfolio analysis."
                         )
                         return None
 
-                    last_trading_date_str = last_trading_date.strftime(SQLServerConsts.DATE_FORMAT)
-                    next_trading_date_str = next_trading_date.strftime(SQLServerConsts.DATE_FORMAT)
+                    last_trading_date_str = last_trading_date.strftime(
+                        SQLServerConsts.DATE_FORMAT
+                    )
+                    next_trading_date_str = next_trading_date.strftime(
+                        SQLServerConsts.DATE_FORMAT
+                    )
 
-                    LOGGER.info(f"Sending daily portfolio notification for {next_trading_date_str}")
+                    LOGGER.info(
+                        f"Sending daily portfolio notification for {next_trading_date_str}"
+                    )
 
                     portfolio_data = (
                         await cls.portfolio_data_provider.get_portfolio_weights(
                             last_trading_date=last_trading_date_str,
-                            next_trading_date=next_trading_date_str
+                            next_trading_date=next_trading_date_str,
                         )
                     )
 
                     if not portfolio_data:
-                        LOGGER.warning(f"No portfolio weights found for {next_trading_date_str}")
+                        LOGGER.warning(
+                            f"No portfolio weights found for {next_trading_date_str}"
+                        )
                         return None
 
                     # Get target weights based on strategy: long only or market neutral
@@ -139,7 +160,9 @@ class PortfolioAnalysisService:
                         ],
                         "target_weights": target_weights,
                         "recommendations": [rec.to_dict() for rec in recommendations],
-                        "analysis_date": next_trading_date.strftime(SQLServerConsts.DATE_FORMAT),
+                        "analysis_date": next_trading_date.strftime(
+                            SQLServerConsts.DATE_FORMAT
+                        ),
                     }
 
                     serializable_result = JSONUtils.make_json_serializable(result)

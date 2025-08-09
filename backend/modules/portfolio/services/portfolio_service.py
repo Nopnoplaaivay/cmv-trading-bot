@@ -1,3 +1,4 @@
+import warnings
 import pandas as pd
 from typing import List
 from pydantic import ValidationError
@@ -7,9 +8,10 @@ from backend.common.responses.exceptions import BaseExceptionResponse
 from backend.modules.auth.types.auth import JwtPayload
 from backend.modules.base.query_builder import TextSQL
 from backend.modules.base_daily import BaseDailyService
-from backend.modules.portfolio.entities import StocksUniverse, Portfolios
+from backend.modules.portfolio.entities import StocksUniverse, Portfolios, PortfolioMetadata
 from backend.modules.portfolio.repositories import (
     PortfoliosRepo,
+    PortfolioMetadataRepo,
     StocksUniverseRepo,
 )
 from backend.modules.portfolio.core import PortfolioOptimizer
@@ -19,6 +21,7 @@ from backend.modules.portfolio.utils.portfolio_utils import PortfolioUtils
 
 class PortfoliosService(BaseDailyService):
     repo = PortfoliosRepo
+    metadata_repo = PortfolioMetadataRepo
 
     @classmethod
     async def update_data(cls, from_date: str) -> pd.DataFrame:
@@ -87,6 +90,7 @@ class PortfoliosService(BaseDailyService):
         cls,
         user_id: int,
         portfolio_name: str,
+        portfolio_desc: str,
         symbols: List[str],
         max_positions: int = 30,
         days_back: int = 21,
@@ -133,14 +137,13 @@ class PortfoliosService(BaseDailyService):
             user_id=user_id, portfolio_name=portfolio_name
         )
 
+        # Get portfolio weights
         portfolio_weights = []
         for j in range(len(x_CEMV)):
             record = {
                 Portfolios.date.name: latest_date,
                 Portfolios.symbol.name: df_portfolio.columns[j],
                 Portfolios.portfolioId.name: portfolio_id,
-                Portfolios.userId.name: user_id,
-                Portfolios.portfolioType.name: "Custom",
                 Portfolios.marketPrice.name: df_portfolio.iloc[-1, j],
                 Portfolios.initialWeight.name: x_CEMV[j],
                 Portfolios.neutralizedWeight.name: max(x_CEMV_neutralized[j], 0.0),
@@ -150,11 +153,22 @@ class PortfoliosService(BaseDailyService):
                 ),
             }
             portfolio_weights.append(record)
-
         portfolio_weights_df = pd.DataFrame(portfolio_weights)
 
-        # Save portfolio weights to the database
+
+        # Save portfolio weights to db
         with cls.repo.session_scope() as session:
+            await cls.metadata_repo.insert(
+                record={
+                    PortfolioMetadata.portfolioId.name: portfolio_id,
+                    PortfolioMetadata.userId.name: user_id,
+                    PortfolioMetadata.name.name: portfolio_name,
+                    PortfolioMetadata.portfolioType.name: "Custom",
+                    PortfolioMetadata.portfolioDesc.name: portfolio_desc,
+                    PortfolioMetadata.algorithm.name: "CMV"
+                },
+                returning=False
+            )
             temp_table = f"#{cls.repo.query_builder.table}"
             await cls.repo.upsert(
                 temp_table=temp_table,
@@ -200,48 +214,95 @@ class PortfoliosService(BaseDailyService):
 
     @classmethod
     async def get_portfolio_by_id(cls, portfolio_id: str, user: JwtPayload) -> pd.DataFrame:
-        portfolio = await cls.repo.get_by_portfolio_id(portfolio_id=portfolio_id)
-        if not portfolio:
-            raise BaseExceptionResponse(
-                http_code=404,
-                status_code=404,
-                message=MessageConsts.NOT_FOUND,
-                errors=f"Portfolio {portfolio_id} not found",
-            )
-
-        unique_user_ids = set(port[Portfolios.userId.name] for port in portfolio)
-        for user_id in unique_user_ids:
-            if user_id != user.userId:
+        with cls.repo.session_scope() as session:
+            portfolio = await cls.repo.get_by_portfolio_id(portfolio_id=portfolio_id)
+            if not portfolio:
                 raise BaseExceptionResponse(
-                    http_code=403,
-                    status_code=403,
-                    message=MessageConsts.FORBIDDEN,
-                    errors=f"User {user.userId} does not have access to portfolio {portfolio_id}",
+                    http_code=404,
+                    status_code=404,
+                    message=MessageConsts.NOT_FOUND,
+                    errors=f"Portfolio {portfolio_id} not found",
                 )
 
-        return {"portfolio": portfolio}
+            portfolios_metadata = await cls.metadata_repo.get_by_portfolio_id(portfolio_id=portfolio_id)
+            if not portfolios_metadata:
+                raise BaseExceptionResponse(
+                    http_code=404,
+                    status_code=404,
+                    message=MessageConsts.NOT_FOUND,
+                    errors=f"No portfolios found for user {user.userId}",
+                )
+            session.commit()
+
+        user_id = portfolios_metadata[0][PortfolioMetadata.userId.name]
+        if user_id != user.userId:
+            raise BaseExceptionResponse(
+                http_code=403,
+                status_code=403,
+                message=MessageConsts.FORBIDDEN,
+                errors=f"User {user.userId} is not allowed to access portfolio {portfolio_id}",
+            )
+
+        return {"records": portfolio}
 
     @classmethod
     async def get_portfolios_by_user_id(cls, user: JwtPayload) -> pd.DataFrame:
-        portfolios = await cls.repo.get_by_user_id(user_id=user.userId)
-        if not portfolios:
+        with cls.repo.session_scope() as session:
+            portfolios_metadata = await cls.metadata_repo.get_by_user_id(user_id=user.userId)
+            if not portfolios_metadata:
+                raise BaseExceptionResponse(
+                    http_code=404,
+                    status_code=404,
+                    message=MessageConsts.NOT_FOUND,
+                    errors=f"No portfolios found for user {user.userId}",
+                )
+            unique_portfolio_ids = set(metadata[PortfolioMetadata.portfolioId.name] for metadata in portfolios_metadata)
+
+
+            condition_str = "'" + "','".join(unique_portfolio_ids) + "'"
+            sql_query = f"""
+                SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+                WITH UncommittedData AS (
+                    SELECT *
+                    FROM [BotPortfolio].[portfolios]
+                    WHERE [portfolioId] IN ({condition_str})
+                )
+
+                SELECT *
+                FROM UncommittedData
+
+            """
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                conn = session.connection().connection
+                df_portfolios = pd.read_sql_query(sql_query, conn)
+
+            session.commit()
+
+        # convert to list of portfolios
+        portfolios_records = df_portfolios.to_dict(orient="records")
+        if not portfolios_records:
             raise BaseExceptionResponse(
                 http_code=404,
                 status_code=404,
                 message=MessageConsts.NOT_FOUND,
                 errors=f"No portfolios found for user {user.userId}",
             )
+        
+        portfolios = []
+        for portfolio_id in unique_portfolio_ids:
+            portfolio_metadata = next(
+                (meta for meta in portfolios_metadata if meta[Portfolios.portfolioId.name] == portfolio_id),
+                None
+            )
+            if portfolio_metadata:
+                portfolios.append({
+                    "metadata": portfolio_metadata,
+                    "records": [
+                        port for port in portfolios_records if port[Portfolios.portfolioId.name] == portfolio_id
+                    ]
+                })
 
-        unique_user_ids = set(port[Portfolios.userId.name] for port in portfolios)
-        for user_id in unique_user_ids:
-            if user_id != user.userId:
-                raise BaseExceptionResponse(
-                    http_code=403,
-                    status_code=403,
-                    message=MessageConsts.FORBIDDEN,
-                    errors=f"User {user.userId} does not have access to this user's portfolio",
-                )
-
-        print(portfolios)
-
-        return {"portfolio": portfolios}
+        return {"portfolios": portfolios}

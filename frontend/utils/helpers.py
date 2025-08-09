@@ -1,7 +1,4 @@
-"""
-Utility functions for CMV Trading Bot frontend
-"""
-
+import streamlit as st
 from typing import Dict, Any
 
 
@@ -43,9 +40,6 @@ def get_priority_color(priority: str) -> str:
 
 
 def init_session_state():
-    """Initialize session state variables"""
-    import streamlit as st
-
     # Initialize core auth state
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
@@ -83,7 +77,6 @@ def init_session_state():
 
 def track_session_state_change(key: str, old_value=None, new_value=None):
     """Track when important session state changes"""
-    import streamlit as st
 
     debug_mode = st.session_state.get("debug_mode", False)
     if debug_mode:
@@ -91,8 +84,6 @@ def track_session_state_change(key: str, old_value=None, new_value=None):
 
 
 def preserve_auth_state():
-    """Ensure auth state is preserved across operations"""
-    import streamlit as st
 
     # Store current auth state
     auth_backup = {
@@ -106,9 +97,41 @@ def preserve_auth_state():
 
 
 def restore_auth_state(auth_backup: dict):
-    """Restore auth state from backup"""
-    import streamlit as st
 
     for key, value in auth_backup.items():
         if value is not None:
             st.session_state[key] = value
+
+
+def init_enhanced_session_state():
+    init_session_state()
+    
+    # Portfolio-specific session state
+    if "selected_symbols" not in st.session_state:
+        st.session_state.selected_symbols = []
+    
+    if "portfolios" not in st.session_state:
+        st.session_state.portfolios = []
+    
+    if "current_portfolio_id" not in st.session_state:
+        st.session_state.current_portfolio_id = None
+    
+    if "portfolio_analysis_cache" not in st.session_state:
+        st.session_state.portfolio_analysis_cache = {}
+
+def render_footer():
+    """Render application footer"""
+    st.markdown("---")
+    st.markdown(
+        """
+        <div style='text-align: center; color: #666; padding: 1rem;'>
+            <p>📈 CMV Trading Bot v2.0 | Enhanced Portfolio Management System</p>
+            <p>Made with ❤️ using Streamlit | 
+            <a href='#' style='color: #2a5298;'>Documentation</a> | 
+            <a href='#' style='color: #2a5298;'>Support</a> | 
+            <a href='#' style='color: #2a5298;'>API</a></p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    

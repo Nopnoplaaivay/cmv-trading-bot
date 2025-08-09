@@ -123,14 +123,11 @@ CREATE TABLE [BotPortfolio].[portfolios] (
     [date] VARCHAR(10) NOT NULL,
     [symbol] VARCHAR(10) NOT NULL,
     [portfolioId] VARCHAR(50) NOT NULL,
-    [portfolioType] VARCHAR(50) DEFAULT 'General',
-    [userId] INT NULL,
     [marketPrice] FLOAT NOT NULL,
     [initialWeight] FLOAT NOT NULL,
     [neutralizedWeight] FLOAT NOT NULL,
     [limitedWeight] FLOAT,
     [neutralizedLimitedWeight] FLOAT,
-    [algorithm] VARCHAR(50) DEFAULT 'CMV',
     [__createdAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
     [__updatedAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL
 );
@@ -139,14 +136,15 @@ GO
 
 
 CREATE TABLE [BotPortfolio].[portfolioMetadata] (
-    portfolioId NVARCHAR(50) PRIMARY KEY,
-    userId INT NOT NULL,
-    name NVARCHAR(100) NOT NULL,
-    description NVARCHAR(500),
-    isActive BIT DEFAULT 1,
+    [portfolioId] NVARCHAR(50) PRIMARY KEY,
+    [userId] INT NOT NULL,
+    [portfolioName] NVARCHAR(100) NOT NULL,
+    [portfolioType] VARCHAR(50) DEFAULT 'General',
+    [portfolioDesc] NVARCHAR(500),
+    [algorithm] VARCHAR(50) DEFAULT 'CMV',
+    [isActive] BIT DEFAULT 1,
     [__createdAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
     [__updatedAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL
-    
 );
 GO
 

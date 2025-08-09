@@ -352,7 +352,8 @@ PORTFOLIO_CSS = """
 """
 
 # Update main CSS to include portfolio styles
-ENHANCED_MAIN_CSS = """
+ENHANCED_MAIN_CSS = (
+    """
 <style>
    /* Original styles */
    .main-header {
@@ -406,6 +407,8 @@ ENHANCED_MAIN_CSS = """
        border: 1px solid #dee2e6;
        color: #495057;
        font-weight: 500;
+       padding: 8px 16px !important;  /* Thêm padding để tạo khoảng cách */
+       min-width: auto;
    }
    
    .stTabs [aria-selected="true"] {
@@ -425,7 +428,11 @@ ENHANCED_MAIN_CSS = """
        border-color: #2a5298;
        box-shadow: 0 0 0 0.2rem rgba(42,82,152,0.25);
    }
-   
+
+    div[data-testid="InputInstructions"] {
+        display: none !important;
+    }
+    
    .stSelectbox > div > div > div {
        border-radius: 8px;
        border: 2px solid #e9ecef;
@@ -435,7 +442,7 @@ ENHANCED_MAIN_CSS = """
        border-radius: 8px;
        border: 2px solid #e9ecef;
    }
-   
+
    /* Sidebar Enhancement */
    .sidebar .sidebar-content {
        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -500,4 +507,6 @@ ENHANCED_MAIN_CSS = """
        100% { transform: rotate(360deg); }
    }
 </style>
-""" + PORTFOLIO_CSS
+"""
+    + PORTFOLIO_CSS
+)

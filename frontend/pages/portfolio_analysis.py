@@ -47,7 +47,6 @@ def portfolio_analysis_page():
             st.session_state.get("strategy_type", "market_neutral"),
         )
 
-        # Debug: Track result
         if debug_mode:
             st.sidebar.caption(f"📊 API returned: {bool(analysis_data)}")
             if analysis_data:

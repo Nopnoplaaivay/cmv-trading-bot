@@ -12,24 +12,34 @@ st.set_page_config(**STREAMLIT_CONFIG)
 
 # Import styles and components
 from frontend.styles.main import MAIN_CSS
-from frontend.utils.helpers import init_session_state
+from frontend.styles.portfolio_styles import ENHANCED_MAIN_CSS
+from frontend.utils.helpers import init_session_state, init_enhanced_session_state
 from frontend.components.auth import render_login_page
+from frontend.components.footer import render_footer
 from frontend.components.dashboard import render_dashboard
 
 # Apply CSS styles
-st.markdown(MAIN_CSS, unsafe_allow_html=True)
+st.markdown(ENHANCED_MAIN_CSS, unsafe_allow_html=True)
+
+
+
 
 
 def main():
     """Main application entry point"""
     # Initialize session state
-    init_session_state()
+    init_enhanced_session_state()
 
     # Route to appropriate page
     if not st.session_state.authenticated:
         render_login_page()
     else:
         render_dashboard()
+
+    # Add footer
+    render_footer()
+
+
 
 
 if __name__ == "__main__":

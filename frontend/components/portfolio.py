@@ -151,7 +151,6 @@ def display_current_positions(positions: List[Dict]):
         "market_value": st.column_config.NumberColumn("Giá trị thị trường", format="%.2f"),
         "realized_profit": st.column_config.NumberColumn("Lãi thực hiện", format="%.2f"),
         "unrealized_profit": st.column_config.NumberColumn("Lãi chưa thực hiện", format="%.2f")
-
     }
 
     if "weight_percentage" in display_df.columns:
