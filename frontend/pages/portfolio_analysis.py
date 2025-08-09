@@ -29,7 +29,7 @@ def portfolio_analysis_page():
 
         if last_refresh is None or (current_time - last_refresh).total_seconds() >= 30:
             st.session_state.last_refresh = current_time
-            PortfolioService.get_portfolio_analysis.clear()
+            PortfolioService.get_system_portfolio_analysis.clear()
             st.info("🔄 Auto-refreshing data...")
 
     with st.spinner("📊 Loading portfolio analysis..."):
@@ -42,7 +42,7 @@ def portfolio_analysis_page():
                 f"🔐 Has token: {bool(st.session_state.get('auth_token'))}"
             )
 
-        analysis_data = PortfolioService.get_portfolio_analysis(
+        analysis_data = PortfolioService.get_system_portfolio_analysis(
             st.session_state.broker_account_id,
             st.session_state.get("strategy_type", "market_neutral"),
         )

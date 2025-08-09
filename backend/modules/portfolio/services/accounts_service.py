@@ -16,6 +16,7 @@ from backend.utils.logger import LOGGER
 
 class AccountsService:
     repo = AccountsRepo
+    user_repo = UsersRepo
 
     @classmethod
     async def get_default_account(cls, user: JwtPayload):
@@ -125,8 +126,8 @@ class AccountsService:
                                 }
                             )
 
-                        with UsersRepo.session_scope() as user_repo_session:
-                            await UsersRepo.update(
+                        with cls.repo.session_scope() as session:
+                            await cls.user_repo.update(
                                 record={
                                     Users.id.name: user.userId,
                                     Users.mobile.name: user_data.get("mobile"),
@@ -140,7 +141,21 @@ class AccountsService:
                                     )
                                 },
                             )
-                            user_repo_session.commit()
+
+                            temp_table = f"#{cls.repo.query_builder.table}"
+                            await cls.repo.upsert(
+                                temp_table=temp_table,
+                                records=accounts_data,
+                                identity_columns=["custodyCode", "brokerAccountId"],
+                                text_clauses={
+                                    "__updatedAt__": TextSQL(
+                                        SQLServerConsts.GMT_7_NOW_VARCHAR
+                                    )
+                                },
+                            )
+
+                            session.commit()
+
 
             return {
                 "message": "DNSE account setup successfully",

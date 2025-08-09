@@ -4,12 +4,12 @@ from typing import Dict, Any
 
 def format_currency(amount: float) -> str:
     """Format currency with proper formatting"""
-    return f"{amount:,.2f} VND"  # Assuming VND as the currency, adjust as needed
+    return f"{amount:,.1f}"  # Assuming VND as the currency, adjust as needed
 
 
 def format_percentage(percentage: float) -> str:
     """Format percentage with proper formatting"""
-    return f"{percentage:.2f}%"
+    return f"{percentage:.1f}%"
 
 
 def safe_numeric_value(value, default=0) -> float:
@@ -118,20 +118,3 @@ def init_enhanced_session_state():
     
     if "portfolio_analysis_cache" not in st.session_state:
         st.session_state.portfolio_analysis_cache = {}
-
-def render_footer():
-    """Render application footer"""
-    st.markdown("---")
-    st.markdown(
-        """
-        <div style='text-align: center; color: #666; padding: 1rem;'>
-            <p>📈 CMV Trading Bot v2.0 | Enhanced Portfolio Management System</p>
-            <p>Made with ❤️ using Streamlit | 
-            <a href='#' style='color: #2a5298;'>Documentation</a> | 
-            <a href='#' style='color: #2a5298;'>Support</a> | 
-            <a href='#' style='color: #2a5298;'>API</a></p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    

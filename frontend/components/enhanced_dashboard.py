@@ -35,24 +35,85 @@ def render_enhanced_dashboard():
 #         account_management_page()
 
 
+# def render_enhanced_sidebar():
+#     """Enhanced sidebar with portfolio features"""
+#     with st.sidebar:
+#         st.markdown(f"### 👋 Welcome, {st.session_state.get('username', 'User')}!")
 
-
-# def render_portfolio_quick_stats():
-#     """Display quick portfolio statistics"""
-#     st.markdown("### 📊 Quick Stats")
-    
-#     from ..services.portfolio_service import PortfolioService
-#     portfolios = PortfolioService.get_my_portfolios()
-    
-#     if portfolios:
-#         custom_portfolios = [p for p in portfolios if p.get('portfolio_type') == 'CUSTOM']
+#         # Navigation
+#         st.markdown("### 🧭 Navigation")
+#         pages = [
+#             "Portfolio Analysis",
+#             "Portfolio Management",  # New page
+#             "Trade Execution",
+#             "Order History",
+#             "Account Management",
+#         ]
         
-#         col1, col2 = st.columns(2)
-#         with col1:
-#             st.metric("My Portfolios", len(custom_portfolios))
-#         with col2:
-#             total_symbols = sum(len(p.get('symbols', [])) for p in custom_portfolios)
-#             st.metric("Total Stocks", total_symbols)
+#         selected_page = st.selectbox(
+#             "Go to",
+#             pages,
+#             index=pages.index(st.session_state.get("current_page", "Portfolio Analysis")),
+#         )
+#         st.session_state.current_page = selected_page
+
+#         st.divider()
+
+#         # Portfolio Selection (only show on analysis page)
+#         if selected_page == "Portfolio Analysis":
+#             st.markdown("### 📊 Portfolio Selection")
+#             render_portfolio_selector()
+
+#         # Account Configuration
+#         st.markdown("### ⚙️ Account Settings")
+        
+#         # Broker Account ID
+#         broker_account_id = st.text_input(
+#             "🏦 Broker Account ID",
+#             value=st.session_state.get("broker_account_id", ""),
+#             placeholder="Enter your account ID",
+#         )
+#         if broker_account_id:
+#             st.session_state.broker_account_id = broker_account_id
+
+#         # Strategy Selection
+#         strategy_type = st.selectbox(
+#             "📊 Trading Strategy",
+#             ["market_neutral", "long_only"],
+#             index=(
+#                 0 if st.session_state.get("strategy_type", "market_neutral") == "market_neutral" else 1
+#             ),
+#         )
+#         st.session_state.strategy_type = strategy_type
+
+#         st.divider()
+
+#         # Portfolio Quick Stats
+#         if selected_page == "Portfolio Analysis":
+#             render_portfolio_quick_stats()
+
+#         # Rest of sidebar (existing code)
+#         render_quick_actions()
+#         render_system_status()
+#         render_logout_button()
+
+
+def render_portfolio_quick_stats():
+    """Display quick portfolio statistics"""
+    st.markdown("### 📊 Quick Stats")
+    
+    from ..services.portfolio_service import PortfolioService
+    portfolios = PortfolioService.get_my_portfolios()
+    
+    if portfolios:
+        custom_portfolios = [p for p in portfolios if p.get('portfolio_type') == 'CUSTOM']
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("My Portfolios", len(custom_portfolios))
+        with col2:
+            total_symbols = sum(len(p.get('symbols', [])) for p in custom_portfolios)
+            st.metric("Total Stocks", total_symbols)
 
 
 # def render_quick_actions():

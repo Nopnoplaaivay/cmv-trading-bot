@@ -1,5 +1,7 @@
 import streamlit as st
 
+from frontend.components.portfolio_quick_stats import render_portfolio_quick_stats
+
 
 def render_enhanced_sidebar():
     with st.sidebar:
@@ -53,8 +55,8 @@ def render_enhanced_sidebar():
         st.divider()
 
         # Portfolio Quick Stats
-        # if selected_page == "Portfolio Analysis":
-        #     render_portfolio_quick_stats()
+        if selected_page == "Portfolio Analysis":
+            render_portfolio_quick_stats()
 
         # Rest of sidebar (existing code)
         render_quick_actions()

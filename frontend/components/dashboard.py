@@ -20,6 +20,8 @@ def render_dashboard():
         
     if st.session_state.current_page == "Portfolio Analysis":
         portfolio_analysis_page()
+    # elif st.session_state.current_page == "Portfolio Management":
+    #     render_portfolio_management_page()
     elif st.session_state.current_page == "Trade Execution":
         trade_execution_page()
     elif st.session_state.current_page == "Order History":
