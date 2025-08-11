@@ -41,7 +41,7 @@ class PortfoliosService(BaseDailyService):
 
         for i in range(days_back - 1, T):
             window = df_stock_pivoted.iloc[i - days_back + 1 : i + 1]
-            end_of_period = window.index[-1]  # Use index instead of column 'date'
+            end_of_period = window.index[-1] 
 
             # Check if need to update the assets for the current month
             if (
@@ -95,123 +95,139 @@ class PortfoliosService(BaseDailyService):
         max_positions: int = 30,
         days_back: int = 21,
     ) -> str:
-        if len(symbols) > max_positions:
+        try:
+            if len(symbols) > max_positions:
+                raise BaseExceptionResponse(
+                    http_code=400,
+                    status_code=400,
+                    message=MessageConsts.BAD_REQUEST,
+                    errors=f"Maximum {max_positions} symbols allowed",
+                )
+            if len(symbols) < 2:
+                raise BaseExceptionResponse(
+                    http_code=400,
+                    status_code=400,
+                    message=MessageConsts.BAD_REQUEST,
+                    errors="At least 2 symbols are required to create a portfolio",
+                )
+
+            df_stock_pivoted = await PriceDataProvider.get_price_data_pivoted()
+
+            # Validate symbols exist
+            await cls.validate_symbols(symbols, df_stock_pivoted)
+
+            df_portfolio = df_stock_pivoted[symbols].copy()
+            df_stock_pivoted = df_stock_pivoted.dropna(axis=1, how="all")
+            # filter data with rows 21 days from the latest date
+            if df_portfolio.empty:
+                raise BaseExceptionResponse(
+                    http_code=404,
+                    status_code=404,
+                    message=MessageConsts.NOT_FOUND,
+                    errors="No stock data available",
+                )
+            latest_date = df_portfolio.index[-1]
+            start_date = pd.to_datetime(latest_date) - pd.Timedelta(days=days_back)
+            last_date = pd.to_datetime(latest_date)
+            df_portfolio = df_portfolio.loc[start_date.strftime(SQLServerConsts.DATE_FORMAT) : last_date.strftime(SQLServerConsts.DATE_FORMAT)]
+
+            x_CEMV, x_CEMV_neutralized, x_CEMV_limited, x_CEMV_neutralized_limit = (
+                PortfolioOptimizer.optimize(df_portfolio=df_portfolio)
+            )
+            portfolio_id = PortfolioUtils.generate_custom_portfolio_id(
+                user_id=user_id, portfolio_name=portfolio_name
+            )
+
+            # Get portfolio weights
+            portfolio_weights = []
+            for j in range(len(x_CEMV)):
+                record = {
+                    Portfolios.date.name: latest_date,
+                    Portfolios.symbol.name: df_portfolio.columns[j],
+                    Portfolios.portfolioId.name: portfolio_id,
+                    Portfolios.marketPrice.name: df_portfolio.iloc[-1, j],
+                    Portfolios.initialWeight.name: x_CEMV[j],
+                    Portfolios.neutralizedWeight.name: max(x_CEMV_neutralized[j], 0.0),
+                    Portfolios.limitedWeight.name: max(x_CEMV_limited[j], 0.0),
+                    Portfolios.neutralizedLimitedWeight.name: max(
+                        x_CEMV_neutralized_limit[j], 0.0
+                    ),
+                }
+                portfolio_weights.append(record)
+            portfolio_weights_df = pd.DataFrame(portfolio_weights)
+
+
+            # Save portfolio weights to db
+            with cls.repo.session_scope() as session:
+                await cls.metadata_repo.insert(
+                    record={
+                        PortfolioMetadata.portfolioId.name: portfolio_id,
+                        PortfolioMetadata.userId.name: user_id,
+                        PortfolioMetadata.portfolioName.name: portfolio_name,
+                        PortfolioMetadata.portfolioType.name: "Custom",
+                        PortfolioMetadata.portfolioDesc.name: portfolio_desc,
+                        PortfolioMetadata.algorithm.name: "CMV"
+                    },
+                    returning=False
+                )
+                temp_table = f"#{cls.repo.query_builder.table}"
+                await cls.repo.upsert(
+                    temp_table=temp_table,
+                    records=portfolio_weights_df,
+                    identity_columns=["date", "symbol"],
+                    text_clauses={"__updatedAt__": TextSQL(SQLServerConsts.GMT_7_NOW_VARCHAR)},
+                )
+                session.commit()
+
+            return 
+        except Exception as e:
             raise BaseExceptionResponse(
-                http_code=400,
-                status_code=400,
-                message=MessageConsts.BAD_REQUEST,
-                errors=f"Maximum {max_positions} symbols allowed",
+                http_code=500,
+                status_code=500,
+                message=MessageConsts.INTERNAL_SERVER_ERROR,
+                errors=str(e)
             )
-        if len(symbols) < 2:
-            raise BaseExceptionResponse(
-                http_code=400,
-                status_code=400,
-                message=MessageConsts.BAD_REQUEST,
-                errors="At least 2 symbols are required to create a portfolio",
-            )
-
-        df_stock_pivoted = await PriceDataProvider.get_price_data_pivoted()
-
-        # Validate symbols exist
-        await cls.validate_symbols(symbols, df_stock_pivoted)
-
-        df_portfolio = df_stock_pivoted[symbols].copy()
-        df_stock_pivoted = df_stock_pivoted.dropna(axis=1, how="all")
-        # filter data with rows 21 days from the latest date
-        if df_portfolio.empty:
-            raise BaseExceptionResponse(
-                http_code=404,
-                status_code=404,
-                message=MessageConsts.NOT_FOUND,
-                errors="No stock data available",
-            )
-        latest_date = df_portfolio.index[-1]
-        start_date = pd.to_datetime(latest_date) - pd.Timedelta(days=days_back)
-        last_date = pd.to_datetime(latest_date)
-        df_portfolio = df_portfolio.loc[start_date.strftime(SQLServerConsts.DATE_FORMAT) : last_date.strftime(SQLServerConsts.DATE_FORMAT)]
-
-        x_CEMV, x_CEMV_neutralized, x_CEMV_limited, x_CEMV_neutralized_limit = (
-            PortfolioOptimizer.optimize(df_portfolio=df_portfolio)
-        )
-        portfolio_id = PortfolioUtils.generate_custom_portfolio_id(
-            user_id=user_id, portfolio_name=portfolio_name
-        )
-
-        # Get portfolio weights
-        portfolio_weights = []
-        for j in range(len(x_CEMV)):
-            record = {
-                Portfolios.date.name: latest_date,
-                Portfolios.symbol.name: df_portfolio.columns[j],
-                Portfolios.portfolioId.name: portfolio_id,
-                Portfolios.marketPrice.name: df_portfolio.iloc[-1, j],
-                Portfolios.initialWeight.name: x_CEMV[j],
-                Portfolios.neutralizedWeight.name: max(x_CEMV_neutralized[j], 0.0),
-                Portfolios.limitedWeight.name: max(x_CEMV_limited[j], 0.0),
-                Portfolios.neutralizedLimitedWeight.name: max(
-                    x_CEMV_neutralized_limit[j], 0.0
-                ),
-            }
-            portfolio_weights.append(record)
-        portfolio_weights_df = pd.DataFrame(portfolio_weights)
-
-
-        # Save portfolio weights to db
-        with cls.repo.session_scope() as session:
-            await cls.metadata_repo.insert(
-                record={
-                    PortfolioMetadata.portfolioId.name: portfolio_id,
-                    PortfolioMetadata.userId.name: user_id,
-                    PortfolioMetadata.portfolioName.name: portfolio_name,
-                    PortfolioMetadata.portfolioType.name: "Custom",
-                    PortfolioMetadata.portfolioDesc.name: portfolio_desc,
-                    PortfolioMetadata.algorithm.name: "CMV"
-                },
-                returning=False
-            )
-            temp_table = f"#{cls.repo.query_builder.table}"
-            await cls.repo.upsert(
-                temp_table=temp_table,
-                records=portfolio_weights_df,
-                identity_columns=["date", "symbol"],
-                text_clauses={"__updatedAt__": TextSQL(SQLServerConsts.GMT_7_NOW_VARCHAR)},
-            )
-            session.commit()
-
-        return portfolio_id
 
     @classmethod
     async def get_portfolio_by_id(cls, portfolio_id: str, user: JwtPayload) -> pd.DataFrame:
-        with cls.repo.session_scope() as session:
-            portfolio = await cls.repo.get_by_portfolio_id(portfolio_id=portfolio_id)
-            if not portfolio:
+        try:
+            with cls.repo.session_scope() as session:
+                portfolio = await cls.repo.get_by_portfolio_id(portfolio_id=portfolio_id)
+                if not portfolio:
+                    raise BaseExceptionResponse(
+                        http_code=404,
+                        status_code=404,
+                        message=MessageConsts.NOT_FOUND,
+                        errors=f"Portfolio {portfolio_id} not found",
+                    )
+
+                portfolios_metadata = await cls.metadata_repo.get_by_portfolio_id(portfolio_id=portfolio_id)
+                if not portfolios_metadata:
+                    raise BaseExceptionResponse(
+                        http_code=404,
+                        status_code=404,
+                        message=MessageConsts.NOT_FOUND,
+                        errors=f"No portfolios found for user {user.userId}",
+                    )
+                session.commit()
+
+            user_id = portfolios_metadata[0][PortfolioMetadata.userId.name]
+            if user_id != user.userId:
                 raise BaseExceptionResponse(
-                    http_code=404,
-                    status_code=404,
-                    message=MessageConsts.NOT_FOUND,
-                    errors=f"Portfolio {portfolio_id} not found",
+                    http_code=403,
+                    status_code=403,
+                    message=MessageConsts.FORBIDDEN,
+                    errors=f"User {user.userId} is not allowed to access portfolio {portfolio_id}",
                 )
 
-            portfolios_metadata = await cls.metadata_repo.get_by_portfolio_id(portfolio_id=portfolio_id)
-            if not portfolios_metadata:
-                raise BaseExceptionResponse(
-                    http_code=404,
-                    status_code=404,
-                    message=MessageConsts.NOT_FOUND,
-                    errors=f"No portfolios found for user {user.userId}",
-                )
-            session.commit()
-
-        user_id = portfolios_metadata[0][PortfolioMetadata.userId.name]
-        if user_id != user.userId:
+            return {"records": portfolio}
+        except Exception as e:
             raise BaseExceptionResponse(
-                http_code=403,
-                status_code=403,
-                message=MessageConsts.FORBIDDEN,
-                errors=f"User {user.userId} is not allowed to access portfolio {portfolio_id}",
+                http_code=500,
+                status_code=500,
+                message=MessageConsts.INTERNAL_SERVER_ERROR,
+                errors=str(e)
             )
-
-        return {"records": portfolio}
 
     @classmethod
     async def get_portfolios_by_user_id(cls, user: JwtPayload) -> pd.DataFrame:

@@ -238,76 +238,76 @@ def render_create_portfolio_form():
                     st.error(f"❌ Failed to create portfolio: {result['error']}")
 
 
-# def render_edit_portfolio_form(portfolio: Dict):
-#     """Render edit form for portfolio"""
-#     st.markdown("---")
-#     st.markdown("#### ✏️ Edit Portfolio")
+def render_edit_portfolio_form(portfolio: Dict):
+    """Render edit form for portfolio"""
+    st.markdown("---")
+    st.markdown("#### ✏️ Edit Portfolio")
 
-#     with st.form(f"edit_portfolio_{portfolio['id']}"):
-#         # Current symbols
-#         current_symbols = portfolio.get('symbols', [])
-#         st.markdown(f"**Current symbols:** {', '.join(current_symbols)}")
+    with st.form(f"edit_portfolio_{portfolio['id']}"):
+        # Current symbols
+        current_symbols = portfolio.get('symbols', [])
+        st.markdown(f"**Current symbols:** {', '.join(current_symbols)}")
 
-#         # Symbol management
-#         col1, col2 = st.columns([3, 1])
+        # Symbol management
+        col1, col2 = st.columns([3, 1])
 
-#         with col1:
-#             new_symbol = st.text_input(
-#                 "Add new symbol",
-#                 placeholder="Enter symbol (e.g., VIC)",
-#                 key=f"new_symbol_{portfolio['id']}"
-#             ).upper()
+        with col1:
+            new_symbol = st.text_input(
+                "Add new symbol",
+                placeholder="Enter symbol (e.g., VIC)",
+                key=f"new_symbol_{portfolio['id']}"
+            ).upper()
 
-#         with col2:
-#             add_symbol = st.form_submit_button("➕ Add")
+        with col2:
+            add_symbol = st.form_submit_button("➕ Add")
 
-#         # Remove symbols
-#         if current_symbols:
-#             symbols_to_remove = st.multiselect(
-#                 "Select symbols to remove",
-#                 options=current_symbols,
-#                 key=f"remove_symbols_{portfolio['id']}"
-#             )
-#         else:
-#             symbols_to_remove = []
+        # Remove symbols
+        if current_symbols:
+            symbols_to_remove = st.multiselect(
+                "Select symbols to remove",
+                options=current_symbols,
+                key=f"remove_symbols_{portfolio['id']}"
+            )
+        else:
+            symbols_to_remove = []
 
-#         # Form actions
-#         col1, col2, col3 = st.columns(3)
+        # Form actions
+        col1, col2, col3 = st.columns(3)
 
-#         with col1:
-#             save_changes = st.form_submit_button("💾 Save Changes", type="primary")
+        with col1:
+            save_changes = st.form_submit_button("💾 Save Changes", type="primary")
 
-#         with col2:
-#             cancel_edit = st.form_submit_button("❌ Cancel")
+        with col2:
+            cancel_edit = st.form_submit_button("❌ Cancel")
 
-#         if add_symbol and new_symbol:
-#             if new_symbol not in current_symbols:
-#                 current_symbols.append(new_symbol)
-#                 st.success(f"Added {new_symbol}")
-#             else:
-#                 st.warning(f"{new_symbol} already in portfolio")
+        if add_symbol and new_symbol:
+            if new_symbol not in current_symbols:
+                current_symbols.append(new_symbol)
+                st.success(f"Added {new_symbol}")
+            else:
+                st.warning(f"{new_symbol} already in portfolio")
 
-#         if save_changes:
-#             # Remove selected symbols
-#             updated_symbols = [s for s in current_symbols if s not in symbols_to_remove]
+        if save_changes:
+            # Remove selected symbols
+            updated_symbols = [s for s in current_symbols if s not in symbols_to_remove]
 
-#             if len(updated_symbols) == 0:
-#                 st.error("Portfolio must contain at least 1 symbol")
-#             else:
-#                 result = PortfolioService.update_portfolio_symbols(
-#                     portfolio['id'], updated_symbols
-#                 )
+            if len(updated_symbols) == 0:
+                st.error("Portfolio must contain at least 1 symbol")
+            else:
+                result = PortfolioService.update_portfolio_symbols(
+                    portfolio['id'], updated_symbols
+                )
 
-#                 if result['success']:
-#                     st.success("Portfolio updated successfully!")
-#                     st.session_state[f"editing_{portfolio['id']}"] = False
-#                     st.rerun()
-#                 else:
-#                     st.error(f"Failed to update: {result['error']}")
+                if result['success']:
+                    st.success("Portfolio updated successfully!")
+                    st.session_state[f"editing_{portfolio['id']}"] = False
+                    st.rerun()
+                else:
+                    st.error(f"Failed to update: {result['error']}")
 
-#         if cancel_edit:
-#             st.session_state[f"editing_{portfolio['id']}"] = False
-#             st.rerun()
+        if cancel_edit:
+            st.session_state[f"editing_{portfolio['id']}"] = False
+            st.rerun()
 
 
 # def render_portfolio_settings():

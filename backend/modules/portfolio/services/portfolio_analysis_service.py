@@ -99,11 +99,6 @@ class PortfolioAnalysisService:
                     last_trading_date, next_trading_date = (
                         cls.trading_calendar.get_last_next_trading_dates()
                     )
-                    if not last_trading_date or not next_trading_date:
-                        LOGGER.warning(
-                            "No trading dates found. Cannot proceed with portfolio analysis."
-                        )
-                        return None
 
                     last_trading_date_str = last_trading_date.strftime(
                         SQLServerConsts.DATE_FORMAT
@@ -111,6 +106,9 @@ class PortfolioAnalysisService:
                     next_trading_date_str = next_trading_date.strftime(
                         SQLServerConsts.DATE_FORMAT
                     )
+
+
+
 
                     LOGGER.info(
                         f"Sending daily portfolio notification for {next_trading_date_str}"
@@ -160,8 +158,12 @@ class PortfolioAnalysisService:
                         ],
                         "target_weights": target_weights,
                         "recommendations": [rec.to_dict() for rec in recommendations],
-                        "analysis_date": next_trading_date.strftime(
-                            SQLServerConsts.DATE_FORMAT
+                        "analysis_date": (
+                            next_trading_date.strftime(SQLServerConsts.DATE_FORMAT)
+                            if next_trading_date
+                            else TimeUtils.get_current_vn_time().strftime(
+                                SQLServerConsts.DATE_FORMAT
+                            )
                         ),
                     }
 
@@ -169,7 +171,13 @@ class PortfolioAnalysisService:
                     return serializable_result
 
         except Exception as e:
+            raise e
             LOGGER.error(
-                f"Error analyzing portfolio for account {broker_account_id}: {e}"
+                f"Error in portfolio analysis for account {broker_account_id}: {str(e)}"
             )
-            return None
+            raise BaseExceptionResponse(
+                http_code=500,
+                status_code=500,
+                message=MessageConsts.INTERNAL_SERVER_ERROR,
+                errors=str(e),
+            )

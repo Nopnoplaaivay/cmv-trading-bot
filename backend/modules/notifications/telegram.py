@@ -1,5 +1,7 @@
 import asyncio
 import aiohttp
+import ssl
+import os
 from typing import Optional, Dict, Any, List
 from enum import Enum
 from datetime import datetime
@@ -28,15 +30,30 @@ class TelegramNotifier:
         chat_id: str,
         max_retries: int = 3,
         retry_delay: float = 1.0,
+        timeout: int = 60,  # Increase default timeout for Docker
     ):
         self.bot_token = bot_token
         self.chat_id = chat_id
         self.max_retries = max_retries
         self.retry_delay = retry_delay
+        self.timeout = timeout
         self.base_url = f"https://api.telegram.org/bot{bot_token}"
 
         self._last_send_time = 0
-        self._min_interval = 0.05  
+        self._min_interval = 0.05
+
+        # Create SSL context for better connection handling
+        self.ssl_context = ssl.create_default_context()
+        self.ssl_context.check_hostname = True
+        self.ssl_context.verify_mode = ssl.CERT_REQUIRED
+
+        # For Docker environments, allow for more flexible SSL
+        import os
+
+        if os.getenv("DOCKER_ENV", "false").lower() == "true":
+            LOGGER.info("Running in Docker environment - adjusting SSL settings")
+            self.ssl_context.check_hostname = False
+            self.ssl_context.verify_mode = ssl.CERT_NONE
 
     async def _rate_limit(self):
         current_time = asyncio.get_event_loop().time()
@@ -69,36 +86,85 @@ class TelegramNotifier:
 
         for attempt in range(self.max_retries):
             try:
-                async with aiohttp.ClientSession() as session:
+                # Create connector with specific SSL and DNS settings optimized for Docker
+                connector = aiohttp.TCPConnector(
+                    ssl=self.ssl_context,
+                    limit=10,
+                    limit_per_host=5,
+                    enable_cleanup_closed=True,
+                    resolver=aiohttp.resolver.DefaultResolver(),
+                    family=0,  # Allow both IPv4 and IPv6
+                    local_addr=None,
+                    ttl_dns_cache=300,
+                    use_dns_cache=True,
+                )
+
+                # Increase timeouts for Docker environment
+                connect_timeout = (
+                    20 if os.getenv("DOCKER_ENV", "false").lower() == "true" else 10
+                )
+                sock_read_timeout = (
+                    20 if os.getenv("DOCKER_ENV", "false").lower() == "true" else 10
+                )
+
+                timeout = aiohttp.ClientTimeout(
+                    total=self.timeout,
+                    connect=connect_timeout,
+                    sock_read=sock_read_timeout,
+                )
+
+                async with aiohttp.ClientSession(
+                    connector=connector, timeout=timeout
+                ) as session:
                     async with session.post(url, json=payload) as response:
                         if response.status == 200:
-                            # LOGGER.info(f"Telegram message sent successfully")
+                            LOGGER.info(
+                                f"Telegram message sent successfully (attempt {attempt + 1})"
+                            )
                             return True
                         else:
                             error_text = await response.text()
-                            LOGGER.warning(f"Telegram API error: {response.status} - {error_text}")
+                            LOGGER.warning(
+                                f"Telegram API error: {response.status} - {error_text}"
+                            )
 
+            except asyncio.TimeoutError:
+                LOGGER.error(
+                    f"Telegram API timeout (attempt {attempt + 1}) - Consider checking network connectivity in Docker"
+                )
+            except aiohttp.ClientConnectorError as e:
+                LOGGER.error(f"Telegram connection error (attempt {attempt + 1}): {e}")
+                # Log additional info for Docker debugging
+                if os.getenv("DOCKER_ENV", "false").lower() == "true":
+                    LOGGER.error(
+                        "Docker environment detected. This might be a DNS/network issue. Check:"
+                    )
+                    LOGGER.error("1. Container has internet access")
+                    LOGGER.error("2. DNS resolution is working")
+                    LOGGER.error("3. Firewall rules allow outbound HTTPS")
+            except ssl.SSLError as e:
+                LOGGER.error(f"Telegram SSL error (attempt {attempt + 1}): {e}")
             except Exception as e:
-                LOGGER.error(f"Failed to send Telegram message (attempt {attempt + 1}): {e}")
+                LOGGER.error(
+                    f"Failed to send Telegram message (attempt {attempt + 1}): {e}"
+                )
 
-                if attempt < self.max_retries - 1:
-                    await asyncio.sleep(self.retry_delay * (attempt + 1))
+            if attempt < self.max_retries - 1:
+                await asyncio.sleep(self.retry_delay * (attempt + 1))
 
         LOGGER.error(
             f"Failed to send Telegram message after {self.max_retries} attempts"
         )
         return False
 
-
-    async def send_model_portfolio_update(
-        self,
-        portfolio_data: Dict
-    ):
+    async def send_model_portfolio_update(self, portfolio_data: Dict):
         date = portfolio_data["date"]
         long_only = portfolio_data["long_only"]
         market_neutral = portfolio_data["market_neutral"]
 
-        date_display = datetime.strptime(date, SQLServerConsts.DATE_FORMAT).strftime("%d/%m/%Y")
+        date_display = datetime.strptime(date, SQLServerConsts.DATE_FORMAT).strftime(
+            "%d/%m/%Y"
+        )
 
         message = f"""
 <b>📊 BÁO CÁO DANH MỤC ĐẦU TƯ NGÀY GIAO DỊCH TIẾP THEO</b>
@@ -111,9 +177,7 @@ class TelegramNotifier:
         if long_only:
             total_long_weight = sum(pos["weight"] for pos in long_only)
             for i, pos in enumerate(long_only[:15], 1):  # Top 15 positions
-                message += (
-                    f"{i:2d}. <b>{pos['symbol']}</b>: {pos['weight']:.2f}%\n"
-                )
+                message += f"{i:2d}. <b>{pos['symbol']}</b>: {pos['weight']:.2f}%\n"
 
             if len(long_only) > 15:
                 remaining = len(long_only) - 15
@@ -151,9 +215,7 @@ class TelegramNotifier:
 
         message += f"\n\n🤖 <i>Được tạo tự động lúc {TimeUtils.get_current_vn_time().strftime('%H:%M:%S %d/%m/%Y')}</i>"
 
-
         await self.send_message(message, MessageType.CHART, disable_notification=False)
-
 
     async def send_system_alert(
         self,
@@ -171,15 +233,45 @@ class TelegramNotifier:
 
         await self.send_message(message, alert_type)
 
-
     async def test_connection(self) -> bool:
         try:
             url = f"{self.base_url}/getMe"
-            async with aiohttp.ClientSession() as session:
+
+            # Create connector with Docker-optimized settings
+            connector = aiohttp.TCPConnector(
+                ssl=self.ssl_context,
+                limit=10,
+                limit_per_host=5,
+                enable_cleanup_closed=True,
+                resolver=aiohttp.resolver.DefaultResolver(),
+                family=0,  # Allow both IPv4 and IPv6
+                local_addr=None,
+                ttl_dns_cache=300,
+                use_dns_cache=True,
+            )
+
+            # Increase timeouts for Docker environment
+            connect_timeout = (
+                20 if os.getenv("DOCKER_ENV", "false").lower() == "true" else 10
+            )
+            sock_read_timeout = (
+                20 if os.getenv("DOCKER_ENV", "false").lower() == "true" else 10
+            )
+
+            timeout = aiohttp.ClientTimeout(
+                total=self.timeout, connect=connect_timeout, sock_read=sock_read_timeout
+            )
+
+            async with aiohttp.ClientSession(
+                connector=connector, timeout=timeout
+            ) as session:
                 async with session.get(url) as response:
                     if response.status == 200:
                         data = await response.json()
                         bot_info = data.get("result", {})
+                        LOGGER.info(
+                            f"Telegram bot connected successfully: @{bot_info.get('username', 'unknown')}"
+                        )
                         # await self.send_message(
                         #     f"🤖 Bot kết nối thành công!\n"
                         #     f"📛 Tên bot: {bot_info.get('first_name', 'Unknown')}\n"
@@ -188,13 +280,25 @@ class TelegramNotifier:
                         # )
                         return True
                     else:
-                        LOGGER.error(f"Telegram bot test failed: {response.status}")
+                        error_text = await response.text()
+                        LOGGER.error(
+                            f"Telegram bot test failed: {response.status} - {error_text}"
+                        )
                         return False
+        except asyncio.TimeoutError:
+            LOGGER.error("Telegram connection test error: Connection timeout")
+            return False
+        except aiohttp.ClientConnectorError as e:
+            LOGGER.error(
+                f"Telegram connection test error: Cannot connect to host api.telegram.org:443 ssl:default [{e}]"
+            )
+            return False
+        except ssl.SSLError as e:
+            LOGGER.error(f"Telegram connection test error: SSL error [{e}]")
+            return False
         except Exception as e:
             LOGGER.error(f"Telegram connection test error: {e}")
             return False
-
-
 
     # async def send_trade_alert(
     #     self,
@@ -228,9 +332,6 @@ class TelegramNotifier:
 
     #     await self.send_message(message, MessageType.ROBOT)
 
-
-
-
     # async def send_portfolio_update(
     #     self,
     #     total_value: float,
@@ -246,16 +347,13 @@ class TelegramNotifier:
     #         <b>📊 CẬP NHẬT DANH MỤC ĐẦU TƯ</b>
 
     #         💎 <b>Tổng tài sản:</b> {total_value:,.0f} VND
-    #         💵 <b>Tiền mặt:</b> {cash:,.0f} VND  
+    #         💵 <b>Tiền mặt:</b> {cash:,.0f} VND
     #         📈 <b>Giá trị CP:</b> {stocks_value:,.0f} VND
 
     #         {pnl_emoji.value} <b>P&L hôm nay:</b> {pnl_sign}{daily_pnl:,.0f} VND ({pnl_sign}{daily_pnl_percent:.2f}%)
     #     """
 
     #     await self.send_message(message, MessageType.CHART)
-
-
-
 
     # async def send_market_data_alert(
     #     self,
@@ -295,5 +393,12 @@ class TelegramNotifier:
 def create_telegram_notifier(
     bot_token: str, chat_id: str, **kwargs
 ) -> TelegramNotifier:
+    """
+    Create a TelegramNotifier instance with enhanced connection settings.
 
+    Args:
+        bot_token: Telegram bot token
+        chat_id: Telegram chat ID
+        **kwargs: Additional parameters (timeout, max_retries, retry_delay)
+    """
     return TelegramNotifier(bot_token, chat_id, **kwargs)

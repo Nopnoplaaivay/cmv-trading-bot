@@ -1,8 +1,3 @@
-"""
-Enhanced Streamlit frontend for CMV Trading Bot with DNSE API integration
-This application provides a comprehensive interface for portfolio management and trading
-"""
-
 import streamlit as st
 
 # Configure Streamlit page

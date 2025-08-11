@@ -2,17 +2,14 @@ import asyncio
 from datetime import datetime, time, timedelta
 from typing import Dict, Any
 
-from backend.modules.portfolio.services.balance_service import BalanceService
-from backend.modules.portfolio.services.deals_service import DealsService
-from backend.modules.portfolio.services import (
-    StocksUniverseService,
-)
-from backend.modules.portfolio.services.portfolio_service import (
-    PortfoliosService,
-)
-from backend.modules.portfolio.services.notification_service import (
-    PortfolioNotificationService,
-)
+
+from backend.common.consts import MessageConsts
+from backend.common.responses.exceptions import BaseExceptionResponse
+from backend.modules.portfolio.services.portfolio_balance_service import BalanceService
+from backend.modules.portfolio.services.portfolio_deals_service import DealsService
+from backend.modules.portfolio.services import StocksUniverseService
+from backend.modules.portfolio.services.portfolio_service import PortfoliosService
+from backend.modules.portfolio.services.portfolio_notification_service import PortfolioNotificationService
 from backend.modules.notifications.service import notify_error, notify_success
 from backend.utils.logger import LOGGER
 from backend.utils.time_utils import TimeUtils
@@ -231,7 +228,12 @@ class DailyDataPipelineService:
                 await notify_error("Daily Pipeline Issues", message)
 
         except Exception as e:
-            LOGGER.error(f"Error sending pipeline summary: {e}")
+            raise BaseExceptionResponse(
+                http_code=500,
+                status_code=500,
+                message=MessageConsts.INTERNAL_SERVER_ERROR,
+                errors=str(e),
+            )
 
     @classmethod
     async def schedule_daily_run(cls) -> None:

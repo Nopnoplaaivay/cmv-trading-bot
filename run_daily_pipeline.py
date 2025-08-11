@@ -18,7 +18,7 @@ import asyncio
 import sys
 from pathlib import Path
 
-from backend.modules.portfolio.services.daily_pipeline_service import DailyDataPipelineService
+from backend.modules.portfolio.services.portfolio_daily_pipeline_service import DailyDataPipelineService
 from backend.utils.logger import LOGGER
 
 

@@ -14,15 +14,25 @@ class NotificationService:
 
     async def initialize(self) -> bool:
         if not telegram_config.is_enabled():
-            LOGGER.warning("Telegram notifications not configured - missing bot token or chat ID")
+            LOGGER.warning(
+                "Telegram notifications not configured - missing bot token or chat ID"
+            )
             return False
 
         try:
+            # Increase timeout for Docker environments
+            import os
+
+            docker_timeout = (
+                90 if os.getenv("DOCKER_ENV", "false").lower() == "true" else 45
+            )
+
             self.telegram = TelegramNotifier(
                 bot_token=telegram_config.bot_token,
                 chat_id=telegram_config.chat_id,
                 max_retries=telegram_config.max_retries,
                 retry_delay=telegram_config.retry_delay,
+                timeout=docker_timeout,  # Dynamic timeout based on environment
             )
 
             if await self.telegram.test_connection():
@@ -40,21 +50,19 @@ class NotificationService:
     def is_ready(self) -> bool:
         return self._initialized and self.telegram is not None
 
-
-    async def notify_daily_portfolio(
-        self, portfolio_data: Dict[str, Any]
-    ) -> None:
+    async def notify_daily_portfolio(self, portfolio_data: Dict[str, Any]) -> None:
         """Notify about daily portfolio weights."""
         if not self.is_ready():
             LOGGER.warning("Notification service not initialized")
             return
 
         try:
-            await self.telegram.send_model_portfolio_update(portfolio_data=portfolio_data)
+            await self.telegram.send_model_portfolio_update(
+                portfolio_data=portfolio_data
+            )
             LOGGER.info(f"Daily portfolio notification sent successfully")
         except Exception as e:
             LOGGER.error(f"Failed to send daily portfolio notification: {e}")
-
 
     # async def notify_trade_execution(
     #     self,

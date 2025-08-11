@@ -149,42 +149,31 @@ async def send_portfolio_report_notification(
         default=True, description="Include trade recommendations in report"
     ),
 ):
-    """Send portfolio analysis report to Telegram"""
-    try:
-        success = await PortfolioNotificationService.send_portfolio_analysis_report(
-            broker_account_id=broker_account_id,
-            strategy_type=strategy_type,
-            include_trade_plan=include_trade_plan,
-            message_type=MessageType.CHART,
+    success = await PortfolioNotificationService.send_portfolio_analysis_report(
+        broker_account_id=broker_account_id,
+        strategy_type=strategy_type,
+        include_trade_plan=include_trade_plan,
+        message_type=MessageType.CHART,
+    )
+
+    if success:
+        response = SuccessResponse(
+            http_code=200,
+            status_code=200,
+            message="Portfolio report sent to Telegram successfully",
+            data={
+                "account_id": broker_account_id,
+                "strategy_type": strategy_type,
+                "notification_sent": True,
+                "include_trade_plan": include_trade_plan,
+            },
         )
-
-        if success:
-            response = SuccessResponse(
-                http_code=200,
-                status_code=200,
-                message="Portfolio report sent to Telegram successfully",
-                data={
-                    "account_id": broker_account_id,
-                    "strategy_type": strategy_type,
-                    "notification_sent": True,
-                    "include_trade_plan": include_trade_plan,
-                },
-            )
-        else:
-            response = BaseResponse(
-                http_code=500,
-                status_code=500,
-                message="Failed to send portfolio report to Telegram",
-                errors="Notification service error",
-            )
-
-        return JSONResponse(status_code=response.http_code, content=response.to_dict())
-
-    except Exception as e:
+    else:
         response = BaseResponse(
             http_code=500,
             status_code=500,
             message=MessageConsts.INTERNAL_SERVER_ERROR,
-            errors=f"Error sending notification: {str(e)}",
+            errors="Notification service error",
         )
-        return JSONResponse(status_code=response.http_code, content=response.to_dict())
+
+    return JSONResponse(status_code=response.http_code, content=response.to_dict())

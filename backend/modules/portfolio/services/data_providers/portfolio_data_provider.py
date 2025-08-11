@@ -78,6 +78,6 @@ class PortfolioDataProvider:
 
         except Exception as e:
             LOGGER.error(
-                f"Error getting portfolio weights for {last_trading_date}: {e}"
+                f"Error getting portfolio weights: {e}"
             )
             return None

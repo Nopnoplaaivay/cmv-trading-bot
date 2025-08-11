@@ -9,7 +9,8 @@ from backend.modules.admin.services import AdminService
 from backend.modules.portfolio.services import (
     BalanceService, 
     DealsService,
-    DailyDataPipelineService    
+    DailyDataPipelineService,
+    PortfolioNotificationService
 )
 from backend.modules.auth.decorators import UserPayload
 from backend.modules.auth.guards import auth_guard, admin_guard
@@ -28,6 +29,7 @@ async def get_users(user: JwtPayload = Depends(UserPayload)):
     )
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
 
+
 @admin_router.get("/update-balances", dependencies=[Depends(auth_guard), Depends(admin_guard)])
 async def update_balances(user: JwtPayload = Depends(UserPayload)):
     success = await BalanceService.update_newest_balances_daily()
@@ -38,6 +40,7 @@ async def update_balances(user: JwtPayload = Depends(UserPayload)):
         data=success,
     )
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
+
 
 @admin_router.get("/update-deals", dependencies=[Depends(auth_guard), Depends(admin_guard)])
 async def update_deals(user: JwtPayload = Depends(UserPayload)):
@@ -61,6 +64,28 @@ async def update_user_role(payload: UpdateRoleDTO, user: JwtPayload = Depends(Us
         data=updated_user,
     )
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
+
+
+@admin_router.get("/send-system-notification", dependencies=[Depends(auth_guard), Depends(admin_guard)])
+async def send_system_notification(user: JwtPayload = Depends(UserPayload)):
+    try:
+        notification_results = await PortfolioNotificationService.send_daily_system_portfolio()
+        response = SuccessResponse(
+            http_code=200,
+            status_code=200,
+            message=MessageConsts.SUCCESS,
+            data=notification_results,
+        )
+        return JSONResponse(status_code=response.http_code, content=response.to_dict())
+    except Exception as e:
+        response = BaseResponse(
+            http_code=500,
+            status_code=500,
+            message=str(e),
+            errors=None
+        )
+        return JSONResponse(status_code=response.http_code, content=response.to_dict())
+
 
 @admin_router.get("/run-pipeline", dependencies=[Depends(auth_guard), Depends(admin_guard)])
 async def run_daily_pipeline(user: JwtPayload = Depends(UserPayload)):

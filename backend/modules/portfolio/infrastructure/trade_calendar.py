@@ -35,10 +35,8 @@ class TradingCalendarService:
         if current_hour >= 17:
             last_trading_date = current_date
             next_trading_date = cls.get_next_trading_date(current_date)
-        elif current_hour < 15:
+        else:
             last_trading_date = cls.get_last_trading_date(current_date)
             next_trading_date = current_date
-    
-    
     
         return last_trading_date, next_trading_date
