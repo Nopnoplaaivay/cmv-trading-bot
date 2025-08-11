@@ -1,3 +1,4 @@
+import pandas as pd
 from decimal import Decimal
 from typing import List, Dict, Optional
 
@@ -55,3 +56,14 @@ class PortfolioProcessor:
 
         positions.sort(key=lambda x: x.weight.percentage, reverse=True)
         return positions
+
+
+    @staticmethod
+    def process_portfolio_pnl(weights_df: pd.DataFrame) -> float:
+        """Calculate the total portfolio PnL based on the weights DataFrame"""
+        if weights_df is None or weights_df.empty:
+            return 0.0
+
+        # Calculate the total portfolio PnL
+        total_value = (weights_df["target_weight"] * weights_df["market_price"]).sum()
+        return total_value

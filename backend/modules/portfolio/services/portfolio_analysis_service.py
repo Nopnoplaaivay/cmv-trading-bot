@@ -177,3 +177,4 @@ class PortfolioAnalysisService:
                 message=MessageConsts.INTERNAL_SERVER_ERROR,
                 errors=str(e),
             )
+

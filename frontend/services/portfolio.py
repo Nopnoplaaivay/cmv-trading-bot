@@ -179,6 +179,33 @@ class PortfolioService:
         except requests.exceptions.RequestException as e:
             return {"success": False, "error": f"Network error: {str(e)}"}
 
+    @staticmethod
+    @st.cache_data(ttl=300)
+    def get_portfolio_pnl(
+        portfolio_id: str, strategy: str = "long-only"
+    ) -> Optional[Dict]:
+        """Get portfolio PnL data for comparison with VN-Index"""
+        try:
+            response = requests.get(
+                f"{API_BASE_URL}/portfolio-service/pnl/{portfolio_id}",
+                params={"strategy": strategy},
+                headers=get_auth_headers(),
+                timeout=60,  # Longer timeout for PnL calculation
+            )
+
+            if response.status_code == 200:
+                return response.json().get("data")
+            elif handle_auth_error(response):
+                return None
+            else:
+                error_msg = response.json().get("message", "Unknown error")
+                st.error(f"Failed to get portfolio PnL: {error_msg}")
+                return None
+
+        except requests.exceptions.RequestException as e:
+            st.error(f"Network error while fetching PnL: {str(e)}")
+            return None
+
         except requests.exceptions.RequestException as e:
             return {"success": False, "error": f"Network error: {str(e)}"}
 

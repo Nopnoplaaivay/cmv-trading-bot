@@ -6,14 +6,41 @@ from frontend.components.portfolio import (
     display_current_positions,
     display_weight_comparison_chart,
 )
+from frontend.components.portfolio_analysis_enhanced import (
+    portfolio_analysis_page as enhanced_analysis_page,
+)
 from ..components.recommendations import display_recommendations_tab
 from ..utils.helpers import format_currency
 
 
 def portfolio_analysis_page():
+    """Main portfolio analysis page with enhanced functionality"""
+
+    # Create tabs for different analysis views
+    tab1, tab2 = st.tabs(["📊 Enhanced Analysis", "📈 System Portfolio"])
+
+    with tab1:
+        # Use the new enhanced analysis component
+        enhanced_analysis_page()
+
+    with tab2:
+        # Keep the existing system portfolio analysis
+        render_system_portfolio_analysis()
+
+
+def render_system_portfolio_analysis():
+    """Render system portfolio analysis (existing functionality)"""
+
+
+def render_system_portfolio_analysis():
+    """Render system portfolio analysis (existing functionality)"""
     if not st.session_state.get("broker_account_id"):
-        st.warning("⚠️ No broker account information available. Please check the Account Information section in the sidebar.")
-        st.info("💡 If you just logged in, try refreshing the account information from the sidebar.")
+        st.warning(
+            "⚠️ No broker account information available. Please check the Account Information section in the sidebar."
+        )
+        st.info(
+            "💡 If you just logged in, try refreshing the account information from the sidebar."
+        )
         return
 
     # Auto-refresh logic - only refresh if enough time has passed and user is authenticated

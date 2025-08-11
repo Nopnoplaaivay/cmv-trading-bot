@@ -13,9 +13,7 @@ class PortfolioMetadataRepo(BaseRepo[Dict]):
     @classmethod
     async def get_by_portfolio_id(cls, portfolio_id: str) -> Dict:
         conditions = {cls.entity.portfolioId.name: portfolio_id}
-        print(f"Conditions for getting portfolio by ID: {conditions}")
         records = await cls.get_by_condition(conditions=conditions)
-        print(f"Records found: {records}")
         return records
     
     @classmethod

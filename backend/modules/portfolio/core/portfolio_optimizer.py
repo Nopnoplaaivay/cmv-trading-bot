@@ -29,7 +29,7 @@ class PortfolioOptimizer:
         # Q = np.nan_to_num(Q, nan=0.0, posinf=1e6, neginf=-1e6)
         # mu = np.nan_to_num(mu, nan=0.0, posinf=1e6, neginf=-1e6)
 
-        x_CEMV, cvxpy_success = cls.solve_portfolio_cvxpy(mu, Q, lambda_)
+        # x_CEMV, cvxpy_success = cls.solve_portfolio_cvxpy(mu, Q, lambda_)
 
         # if cvxpy_success:
         #     cls.success_count += 1
@@ -41,10 +41,10 @@ class PortfolioOptimizer:
 
         # x_CEMV = cls.normalize_weights_exact(x_CEMV)
         x_CEMV_neutralized = cls.neutralize_weights_exact(x_CEMV)
-        x_CEMV_limited = cls.normalize_weights_limit(x_CEMV, max_weight=0.1)
-        x_CEMV_neutralized_limit = cls.neutralize_weights_limit(x_CEMV_limited, max_weight=0.1)
+        # x_CEMV_limited = cls.normalize_weights_limit(x_CEMV, max_weight=0.1)
+        # x_CEMV_neutralized_limit = cls.neutralize_weights_limit(x_CEMV_limited, max_weight=0.1)
 
-        return x_CEMV, x_CEMV_neutralized, x_CEMV_limited, x_CEMV_neutralized_limit
+        return x_CEMV, x_CEMV_neutralized, 0.0, 0.0
 
     @classmethod
     def solve_portfolio_cvxpy(cls, mu, Q, lambda_):

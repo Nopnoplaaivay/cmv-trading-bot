@@ -1,61 +1,332 @@
-# # frontend/components/enhanced_portfolio_analysis.py
-# """
-# Enhanced portfolio analysis components supporting custom portfolios
-# """
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
+from typing import Dict, Optional
+from datetime import datetime
 
-# import streamlit as st
-# import pandas as pd
-# import plotly.express as px
-# import plotly.graph_objects as go
-# from plotly.subplots import make_subplots
-# from typing import Dict, List, Optional
-# from ..services.portfolio_service import PortfolioService
-# from ..services.api import get_portfolio_analysis
-# from ..utils.helpers import format_currency, format_percentage
+from frontend.services.portfolio import PortfolioService
 
 
-# def render_portfolio_analysis_dashboard():
-#     """Main portfolio analysis dashboard"""
-#     # Portfolio selection
-#     selected_portfolio_id = render_advanced_portfolio_selector()
-    
-#     if not selected_portfolio_id:
-#         render_no_portfolio_selected()
-#         return
-    
-#     # Strategy and analysis settings
-#     col1, col2, col3 = st.columns([2, 2, 1])
-    
-#     with col1:
-#         strategy_type = st.selectbox(
-#             "📊 Analysis Strategy",
-#             ["market_neutral", "long_only"],
-#             index=0 if st.session_state.get("strategy_type", "market_neutral") == "market_neutral" else 1,
-#             key="analysis_strategy"
-#         )
-#         st.session_state.strategy_type = strategy_type
-    
-#     with col2:
-#         analysis_period = st.selectbox(
-#             "📅 Analysis Period",
-#             ["1 Month", "3 Months", "6 Months", "1 Year"],
-#             index=2,
-#             key="analysis_period"
-#         )
-    
-#     with col3:
-#         if st.button("🔄 Refresh Analysis", use_container_width=True):
-#             # Clear cache and refresh
-#             PortfolioService.get_portfolio_analysis.clear()
-#             st.rerun()
-    
+def portfolio_analysis_page():
+    """Portfolio analysis page with risk metrics and comparison charts"""
+    st.subheader("📈 Portfolio Analysis")
+
+    # Portfolio selector
+    selected_portfolio_id = render_portfolio_selector_for_analysis()
+
+    if not selected_portfolio_id:
+        st.info("Please select a portfolio to analyze.")
+        return
+
+    # Create tabs for different analysis views
+    tab1, tab2, tab3 = st.tabs(
+        ["📊 Performance Chart", "📋 Risk Metrics", "📈 Detailed Analysis"]
+    )
+
+    with tab1:
+        render_performance_comparison_chart(selected_portfolio_id)
+
+    with tab2:
+        render_risk_metrics_placeholder()
+
+    with tab3:
+        render_detailed_analysis_placeholder()
+
+
+def render_portfolio_selector_for_analysis() -> Optional[str]:
+    """Render portfolio selector for analysis"""
+    portfolios = PortfolioService.get_my_portfolios().get("portfolios", [])
+
+    if not portfolios:
+        st.warning("No portfolios found. Please create a portfolio first.")
+        return None
+
+    # Filter custom portfolios
+    custom_portfolios = [
+        p for p in portfolios if p["metadata"].get("portfolioType") == "Custom"
+    ]
+
+    if not custom_portfolios:
+        st.warning(
+            "No custom portfolios found. Please create a custom portfolio first."
+        )
+        return None
+
+    # Create portfolio options
+    portfolio_options = {}
+    for portfolio in custom_portfolios:
+        name = portfolio["metadata"].get("portfolioName", "Unknown")
+        portfolio_id = portfolio["portfolioId"]
+        num_stocks = len(portfolio.get("records", []))
+        display_name = f"{name} ({num_stocks} stocks)"
+        portfolio_options[display_name] = portfolio_id
+
+    selected_display_name = st.selectbox(
+        "📊 Select Portfolio to Analyze",
+        options=list(portfolio_options.keys()),
+        key="analysis_portfolio_selector",
+    )
+
+    return portfolio_options[selected_display_name] if selected_display_name else None
+
+
+def render_performance_comparison_chart(portfolio_id: str):
+    """Render performance comparison chart between portfolio and VN-Index"""
+    st.subheader("📊 Portfolio vs VN-Index Performance")
+
+    # Strategy selector
+    strategy = st.radio(
+        "Select Strategy",
+        options=["long-only", "market-neutral"],
+        index=0,
+        horizontal=True,
+        key=f"strategy_selector_{portfolio_id}",
+    )
+
+    # Loading state
+    with st.spinner("Loading portfolio performance data..."):
+        try:
+            # Get PnL data from API
+            pnl_data = PortfolioService.get_portfolio_pnl(portfolio_id, strategy)
+
+            if not pnl_data:
+                st.error("Failed to load portfolio PnL data.")
+                return
+
+            # Extract data
+            portfolio_pnl = pnl_data.get("portfolio", [])
+            vnindex_pnl = pnl_data.get("vnindex", [])
+            metadata = pnl_data.get("metadata", {})
+
+            if not portfolio_pnl or not vnindex_pnl:
+                st.warning("No PnL data available for the selected portfolio.")
+                return
+
+            # Create comparison chart
+            fig = create_comparison_chart(portfolio_pnl, vnindex_pnl, metadata)
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Display metadata
+            render_performance_metadata(metadata)
+
+        except Exception as e:
+            st.error(f"Error loading portfolio performance: {str(e)}")
+
+
+def create_comparison_chart(
+    portfolio_pnl: list, vnindex_pnl: list, metadata: dict
+) -> go.Figure:
+    """Create PnL comparison chart"""
+
+    # Convert to DataFrames
+    portfolio_df = pd.DataFrame(portfolio_pnl)
+    vnindex_df = pd.DataFrame(vnindex_pnl)
+
+    # Convert date columns
+    portfolio_df["date"] = pd.to_datetime(portfolio_df["date"])
+    vnindex_df["date"] = pd.to_datetime(vnindex_df["date"])
+
+    fig = go.Figure()
+
+    # Portfolio PnL line
+    fig.add_trace(
+        go.Scatter(
+            x=portfolio_df["date"],
+            y=portfolio_df["pnl_pct"],
+            mode="lines",
+            name="Portfolio PnL (%)",
+            line=dict(color="#1f77b4", width=2.5),
+            hovertemplate="<b>Portfolio</b><br>Date: %{x}<br>PnL: %{y:.2f}%<extra></extra>",
+        )
+    )
+
+    # VN-Index PnL line
+    fig.add_trace(
+        go.Scatter(
+            x=vnindex_df["date"],
+            y=vnindex_df["pnl_pct"],
+            mode="lines",
+            name="VN-Index PnL (%)",
+            line=dict(color="#ff7f0e", width=2.5),
+            hovertemplate="<b>VN-Index</b><br>Date: %{x}<br>PnL: %{y:.2f}%<extra></extra>",
+        )
+    )
+
+    # Zero line
+    fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
+
+    # Get date range for title
+    from_date = metadata.get("from_date", "N/A")
+    to_date = metadata.get("to_date", "N/A")
+    portfolio_name = metadata.get("portfolio_id", "Portfolio")
+    strategy = metadata.get("strategy", "long-only")
+
+    fig.update_layout(
+        title=f"Performance Comparison: {portfolio_name} vs VN-Index<br>"
+        f"<sub>Strategy: {strategy} | Period: {from_date} to {to_date}</sub>",
+        xaxis_title="Date",
+        yaxis_title="PnL (%)",
+        hovermode="x unified",
+        legend=dict(x=0.02, y=0.98),
+        height=600,
+        showlegend=True,
+        template="plotly_white",
+        xaxis=dict(showgrid=True, gridwidth=1, gridcolor="rgba(128,128,128,0.2)"),
+        yaxis=dict(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor="rgba(128,128,128,0.2)",
+            ticksuffix="%",
+        ),
+    )
+
+    return fig
+
+
+def render_performance_metadata(metadata: dict):
+    """Render performance metadata"""
+    st.subheader("📊 Performance Summary")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("Total Portfolio Days", metadata.get("total_portfolio_days", 0))
+
+    with col2:
+        st.metric("Total Index Days", metadata.get("total_index_days", 0))
+
+    with col3:
+        st.metric("Total Unique Dates", metadata.get("total_dates", 0))
+
+    with col4:
+        symbols = metadata.get("symbols", [])
+        st.metric("Portfolio Stocks", len(symbols))
+
+    # Data quality metrics
+    if (
+        metadata.get("missing_in_portfolio", 0) > 0
+        or metadata.get("missing_in_index", 0) > 0
+    ):
+        st.info(
+            f"Data Quality: {metadata.get('missing_in_portfolio', 0)} days missing in portfolio, "
+            f"{metadata.get('missing_in_index', 0)} days missing in index"
+        )
+
+    # Portfolio composition
+    if symbols:
+        st.subheader("📋 Portfolio Composition")
+        symbols_text = ", ".join(symbols)
+        st.text_area("Stocks in Portfolio", symbols_text, height=100, disabled=True)
+
+
+def render_risk_metrics_placeholder():
+    """Render risk metrics section (placeholder for future implementation)"""
+    st.subheader("📊 Risk Metrics")
+
+    st.info("🚧 Risk metrics will be implemented in future updates. Coming soon:")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown(
+            """
+        **Return Metrics:**
+        - Sharpe Ratio
+        - Sortino Ratio  
+        - Information Ratio
+        - Alpha vs VN-Index
+        - Beta vs VN-Index
+        """
+        )
+
+    with col2:
+        st.markdown(
+            """
+        **Risk Metrics:**
+        - Maximum Drawdown
+        - Value at Risk (VaR)
+        - Win Rate
+        - Average Win/Loss
+        - Volatility (Annualized)
+        """
+        )
+
+    # Placeholder metrics with dummy data
+    st.subheader("📈 Sample Risk Metrics (Demo)")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("Sharpe Ratio", "1.25", delta="0.15")
+
+    with col2:
+        st.metric("Max Drawdown", "-8.5%", delta="-1.2%")
+
+    with col3:
+        st.metric("Win Rate", "65%", delta="5%")
+
+    with col4:
+        st.metric("Volatility", "18.5%", delta="-2.1%")
+
+
+def render_detailed_analysis_placeholder():
+    """Render detailed analysis section (placeholder)"""
+    st.subheader("📈 Detailed Analysis")
+
+    st.info("🚧 Detailed analysis features coming soon:")
+
+    st.markdown(
+        """
+    **Planned Features:**
+    - Monthly/Quarterly performance breakdown
+    - Sector allocation analysis
+    - Rolling metrics charts
+    - Performance attribution
+    - Risk-adjusted returns
+    - Correlation analysis
+    - Factor exposure analysis
+    """
+    )
+
+    # Sample chart placeholder
+    st.subheader("📊 Sample Rolling Sharpe Ratio (Demo)")
+
+    # Create dummy rolling Sharpe data
+    dates = pd.date_range(start="2023-01-01", end="2024-12-31", freq="D")[:200]
+    sharpe_values = pd.Series(range(len(dates))).apply(
+        lambda x: 0.8 + 0.5 * (x % 20) / 20
+    )
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=dates,
+            y=sharpe_values,
+            mode="lines",
+            name="30-Day Rolling Sharpe",
+            line=dict(color="green", width=2),
+        )
+    )
+
+    fig.update_layout(
+        title="30-Day Rolling Sharpe Ratio (Sample)",
+        xaxis_title="Date",
+        yaxis_title="Sharpe Ratio",
+        height=400,
+        template="plotly_white",
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
 #     # Get analysis data
 #     analysis_data = get_analysis_data(selected_portfolio_id, strategy_type)
-    
+
 #     if not analysis_data:
 #         st.error("❌ Failed to load portfolio analysis")
 #         return
-    
+
 #     # Analysis dashboard
 #     render_analysis_dashboard(analysis_data, selected_portfolio_id)
 
@@ -63,20 +334,20 @@
 # def render_advanced_portfolio_selector():
 #     """Advanced portfolio selector with search and filtering"""
 #     portfolios = PortfolioService.get_my_portfolios()
-    
+
 #     if not portfolios:
 #         st.warning("👈 Create your first portfolio to start analysis")
 #         return None
-    
+
 #     # Create portfolio options
 #     portfolio_options = []
 #     portfolio_map = {}
-    
+
 #     # System portfolio
 #     system_option = "🏢 System Portfolio (Top 20 Monthly)"
 #     portfolio_options.append(system_option)
 #     portfolio_map[system_option] = "SYSTEM"
-    
+
 #     # Custom portfolios
 #     custom_portfolios = [p for p in portfolios if p.get('portfolio_type') == 'CUSTOM']
 #     for portfolio in custom_portfolios:
@@ -85,7 +356,7 @@
 #         option_text = f"{status} {portfolio['name']} ({symbols_count} stocks)"
 #         portfolio_options.append(option_text)
 #         portfolio_map[option_text] = portfolio['id']
-    
+
 #     # Portfolio selector
 #     selected_option = st.selectbox(
 #         "📊 Select Portfolio for Analysis",
@@ -93,43 +364,43 @@
 #         key="portfolio_analysis_selector",
 #         help="Choose a portfolio to analyze. System portfolio is updated monthly with top 20 stocks."
 #     )
-    
+
 #     return portfolio_map.get(selected_option)
 
 
 # def render_no_portfolio_selected():
 #     """Render when no portfolio is selected"""
 #     st.info("📊 Select a portfolio from the dropdown above to view analysis")
-    
+
 #     # Quick stats about available portfolios
 #     portfolios = PortfolioService.get_my_portfolios()
 #     custom_portfolios = [p for p in portfolios if p.get('portfolio_type') == 'CUSTOM']
-    
+
 #     if custom_portfolios:
 #         st.markdown("#### 📋 Your Available Portfolios:")
-        
+
 #         for portfolio in custom_portfolios[:5]:  # Show first 5
 #             col1, col2, col3 = st.columns([3, 1, 1])
-            
+
 #             with col1:
 #                 status = "🟢 Active" if portfolio.get('is_active', True) else "🔴 Inactive"
 #                 st.markdown(f"**{portfolio['name']}** - {status}")
-            
+
 #             with col2:
 #                 st.markdown(f"{len(portfolio.get('symbols', []))} stocks")
-            
+
 #             with col3:
 #                 if st.button("📊 Analyze", key=f"quick_analyze_{portfolio['id']}"):
 #                     st.session_state.current_portfolio_id = portfolio['id']
 #                     st.rerun()
-        
+
 #         if len(custom_portfolios) > 5:
 #             st.markdown(f"*... and {len(custom_portfolios) - 5} more portfolios*")
-    
+
 #     else:
 #         st.markdown("#### 🎯 Get Started")
 #         st.markdown("Create your first custom portfolio to begin analysis!")
-        
+
 #         if st.button("➕ Create Portfolio", use_container_width=True):
 #             st.session_state.current_page = "Portfolio Management"
 #             st.rerun()
@@ -153,32 +424,32 @@
 #     """Render comprehensive analysis dashboard"""
 #     # Portfolio summary
 #     render_enhanced_portfolio_summary(analysis_data, portfolio_id)
-    
+
 #     # Analysis tabs
 #     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-#         "📊 Portfolio Overview", 
-#         "📈 Holdings Analysis", 
-#         "🎯 Recommendations", 
+#         "📊 Portfolio Overview",
+#         "📈 Holdings Analysis",
+#         "🎯 Recommendations",
 #         "📉 Risk Metrics",
 #         "⚖️ Performance",
 #         "🔍 Detailed Report"
 #     ])
-    
+
 #     with tab1:
 #         render_portfolio_overview_tab(analysis_data)
-    
+
 #     with tab2:
 #         render_holdings_analysis_tab(analysis_data)
-    
+
 #     with tab3:
 #         render_recommendations_tab(analysis_data)
-    
+
 #     with tab4:
 #         render_risk_metrics_tab(analysis_data)
-    
+
 #     with tab5:
 #         render_performance_tab(analysis_data)
-    
+
 #     with tab6:
 #         render_detailed_report_tab(analysis_data, portfolio_id)
 
@@ -186,14 +457,14 @@
 # def render_enhanced_portfolio_summary(analysis_data: Dict, portfolio_id: str):
 #     """Enhanced portfolio summary with more metrics"""
 #     st.markdown("### 💼 Portfolio Summary")
-    
+
 #     account_balance = analysis_data.get("account_balance", {})
 #     current_positions = analysis_data.get("current_positions", [])
 #     recommendations = analysis_data.get("recommendations", [])
-    
+
 #     # Key metrics
 #     col1, col2, col3, col4, col5 = st.columns(5)
-    
+
 #     with col1:
 #         nav = account_balance.get("net_asset_value", 0)
 #         st.metric(
@@ -201,7 +472,7 @@
 #             format_currency(nav),
 #             help="Total portfolio value including cash and investments"
 #         )
-    
+
 #     with col2:
 #         cash = account_balance.get("available_cash", 0)
 #         cash_ratio = account_balance.get("cash_ratio", 0)
@@ -211,7 +482,7 @@
 #             delta=f"{cash_ratio:.1f}% of portfolio",
 #             help="Cash available for new investments"
 #         )
-    
+
 #     with col3:
 #         positions_count = len(current_positions)
 #         st.metric(
@@ -219,7 +490,7 @@
 #             positions_count,
 #             help="Number of currently held stocks"
 #         )
-    
+
 #     with col4:
 #         recommendations_count = len(recommendations)
 #         buy_count = len([r for r in recommendations if r.get("action") == "BUY"])
@@ -229,7 +500,7 @@
 #             delta=f"{buy_count} Buy signals",
 #             help="Current trade recommendations"
 #         )
-    
+
 #     with col5:
 #         strategy = analysis_data.get("strategy_type", "N/A").replace("_", " ").title()
 #         concentration = calculate_portfolio_concentration(current_positions)
@@ -244,24 +515,24 @@
 # def render_portfolio_overview_tab(analysis_data: Dict):
 #     """Portfolio overview with charts and key metrics"""
 #     current_positions = analysis_data.get("current_positions", [])
-    
+
 #     if not current_positions:
 #         st.info("📊 No current positions to display")
 #         return
-    
+
 #     # Portfolio allocation chart
 #     col1, col2 = st.columns(2)
-    
+
 #     with col1:
 #         render_portfolio_allocation_chart(current_positions)
-    
+
 #     with col2:
 #         render_sector_allocation_chart(current_positions)
-    
+
 #     # Top holdings table
 #     st.markdown("#### 🏆 Top Holdings")
 #     render_top_holdings_table(current_positions)
-    
+
 #     # Portfolio statistics
 #     render_portfolio_statistics(current_positions)
 
@@ -270,26 +541,26 @@
 #     """Render portfolio allocation pie chart"""
 #     if not positions:
 #         return
-    
+
 #     # Prepare data
 #     df_positions = pd.DataFrame(positions)
-    
+
 #     # Handle weight column (could be nested dict)
 #     weights = []
 #     symbols = []
-    
+
 #     for position in positions:
 #         symbol = position.get("symbol", "Unknown")
 #         weight = position.get("weight", {})
-        
+
 #         if isinstance(weight, dict):
 #             weight_value = weight.get("percentage", 0)
 #         else:
 #             weight_value = float(weight) if weight else 0
-        
+
 #         symbols.append(symbol)
 #         weights.append(weight_value)
-    
+
 #     # Create pie chart
 #     fig = px.pie(
 #         values=weights,
@@ -297,19 +568,19 @@
 #         title="Portfolio Allocation by Weight",
 #         color_discrete_sequence=px.colors.qualitative.Set3
 #     )
-    
+
 #     fig.update_traces(
 #         textposition="inside",
 #         textinfo="percent+label",
 #         hovertemplate="<b>%{label}</b><br>Weight: %{percent}<br>Value: %{value:.2f}%<extra></extra>"
 #     )
-    
+
 #     fig.update_layout(
 #         showlegend=True,
 #         height=400,
 #         font=dict(size=12)
 #     )
-    
+
 #     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -318,7 +589,7 @@
 #     # Mock sector data - in real implementation, this would come from the API
 #     sectors = ["Technology", "Banking", "Real Estate", "Industrial", "Consumer", "Energy"]
 #     sector_weights = [25, 20, 18, 15, 12, 10]  # Mock percentages
-    
+
 #     fig = px.bar(
 #         x=sectors,
 #         y=sector_weights,
@@ -326,14 +597,14 @@
 #         color=sector_weights,
 #         color_continuous_scale="Blues"
 #     )
-    
+
 #     fig.update_layout(
 #         xaxis_title="Sectors",
 #         yaxis_title="Weight (%)",
 #         height=400,
 #         showlegend=False
 #     )
-    
+
 #     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -341,29 +612,29 @@
 #     """Render top holdings table with enhanced information"""
 #     if not positions:
 #         return
-    
+
 #     # Prepare data
 #     holdings_data = []
-    
+
 #     for position in positions:
 #         symbol = position.get("symbol", "")
 #         quantity = position.get("quantity", 0)
-        
+
 #         # Handle nested dict structure
 #         market_price = position.get("market_price", {})
 #         if isinstance(market_price, dict):
 #             price_value = market_price.get("amount", 0)
 #         else:
 #             price_value = float(market_price) if market_price else 0
-        
+
 #         weight = position.get("weight", {})
 #         if isinstance(weight, dict):
 #             weight_value = weight.get("percentage", 0)
 #         else:
 #             weight_value = float(weight) if weight else 0
-        
+
 #         market_value = price_value * quantity
-        
+
 #         holdings_data.append({
 #             "Symbol": symbol,
 #             "Quantity": f"{quantity:,}",
@@ -372,10 +643,10 @@
 #             "Weight": f"{weight_value:.2f}%",
 #             "P&L": f"{position.get('unrealized_profit', {}).get('amount', 0):,.0f}" if isinstance(position.get('unrealized_profit'), dict) else f"{position.get('unrealized_profit', 0):,.0f}"
 #         })
-    
+
 #     # Sort by weight and show top 10
 #     df_holdings = pd.DataFrame(holdings_data)
-    
+
 #     # Custom styling
 #     st.dataframe(
 #         df_holdings.head(10),
@@ -396,9 +667,9 @@
 #     """Render portfolio statistics"""
 #     if not positions:
 #         return
-    
+
 #     st.markdown("#### 📊 Portfolio Statistics")
-    
+
 #     # Calculate statistics
 #     weights = []
 #     for position in positions:
@@ -408,34 +679,34 @@
 #         else:
 #             weight_value = float(weight) if weight else 0
 #         weights.append(weight_value)
-    
+
 #     concentration = calculate_portfolio_concentration(positions)
 #     max_weight = max(weights) if weights else 0
 #     min_weight = min([w for w in weights if w > 0]) if weights else 0
-    
+
 #     col1, col2, col3, col4 = st.columns(4)
-    
+
 #     with col1:
 #         st.metric(
 #             "🎯 Concentration (HHI)",
 #             f"{concentration:.4f}",
 #             help="Herfindahl-Hirschman Index: Lower values indicate better diversification"
 #         )
-    
+
 #     with col2:
 #         st.metric(
 #             "📈 Largest Position",
 #             f"{max_weight:.2f}%",
 #             help="Weight of the largest holding"
 #         )
-    
+
 #     with col3:
 #         st.metric(
 #             "📉 Smallest Position",
 #             f"{min_weight:.2f}%",
 #             help="Weight of the smallest holding"
 #         )
-    
+
 #     with col4:
 #         avg_weight = sum(weights) / len(weights) if weights else 0
 #         st.metric(
@@ -449,7 +720,7 @@
 #     """Calculate Herfindahl-Hirschman Index for portfolio concentration"""
 #     if not positions:
 #         return 0
-    
+
 #     weights = []
 #     for position in positions:
 #         weight = position.get("weight", {})
@@ -458,7 +729,7 @@
 #         else:
 #             weight_value = float(weight) / 100 if weight else 0
 #         weights.append(weight_value)
-    
+
 #     # HHI = sum of squared weights
 #     hhi = sum(w ** 2 for w in weights)
 #     return hhi
@@ -467,17 +738,17 @@
 # def render_holdings_analysis_tab(analysis_data: Dict):
 #     """Detailed holdings analysis tab"""
 #     current_positions = analysis_data.get("current_positions", [])
-    
+
 #     if not current_positions:
 #         st.info("📊 No holdings to analyze")
 #         return
-    
+
 #     # Performance analysis
 #     render_holdings_performance_analysis(current_positions)
-    
+
 #     # Weight distribution analysis
 #     render_weight_distribution_analysis(current_positions)
-    
+
 #     # Holdings comparison
 #     render_holdings_comparison(current_positions)
 
@@ -485,18 +756,18 @@
 # def render_holdings_performance_analysis(positions: List[Dict]):
 #     """Render holdings performance analysis"""
 #     st.markdown("#### 🎯 Performance Analysis")
-    
+
 #     # Mock performance data - in real implementation, get from API
 #     performance_data = []
-    
+
 #     for position in positions:
 #         symbol = position.get("symbol", "")
-        
+
 #         # Mock data
 #         daily_return = np.random.normal(0.001, 0.02)
 #         ytd_return = np.random.normal(0.05, 0.15)
 #         volatility = np.random.uniform(0.15, 0.35)
-        
+
 #         performance_data.append({
 #             "Symbol": symbol,
 #             "Daily Return": f"{daily_return:.2%}",
@@ -504,9 +775,9 @@
 #             "Volatility": f"{volatility:.2%}",
 #             "Beta": f"{np.random.uniform(0.5, 1.5):.2f}"
 #         })
-    
+
 #     df_performance = pd.DataFrame(performance_data)
-    
+
 #     st.dataframe(
 #         df_performance,
 #         use_container_width=True,
@@ -517,10 +788,10 @@
 # def render_recommendations_tab(analysis_data: Dict):
 #     """Enhanced recommendations tab"""
 #     from ..components.recommendations import display_recommendations_tab
-    
+
 #     recommendations = analysis_data.get("recommendations", [])
 #     display_recommendations_tab(recommendations)
-    
+
 #     # Additional recommendation insights
 #     if recommendations:
 #         render_recommendation_insights(recommendations)
@@ -529,17 +800,17 @@
 # def render_recommendation_insights(recommendations: List[Dict]):
 #     """Render additional insights about recommendations"""
 #     st.markdown("#### 🔍 Recommendation Insights")
-    
+
 #     # Categorize recommendations
 #     buy_recs = [r for r in recommendations if r.get("action") == "BUY"]
 #     sell_recs = [r for r in recommendations if r.get("action") == "SELL"]
-    
+
 #     high_priority = [r for r in recommendations if r.get("priority") == "HIGH"]
 #     medium_priority = [r for r in recommendations if r.get("priority") == "MEDIUM"]
 #     low_priority = [r for r in recommendations if r.get("priority") == "LOW"]
-    
+
 #     col1, col2 = st.columns(2)
-    
+
 #     with col1:
 #         st.markdown("**🎯 Action Distribution**")
 #         fig_actions = px.pie(
@@ -550,7 +821,7 @@
 #         )
 #         fig_actions.update_layout(height=300)
 #         st.plotly_chart(fig_actions, use_container_width=True)
-    
+
 #     with col2:
 #         st.markdown("**⚡ Priority Distribution**")
 #         fig_priority = px.pie(
@@ -566,10 +837,10 @@
 # def render_risk_metrics_tab(analysis_data: Dict):
 #     """Render risk metrics and analysis"""
 #     st.markdown("#### ⚠️ Risk Analysis")
-    
+
 #     # Mock risk data - in real implementation, calculate from portfolio data
 #     col1, col2, col3 = st.columns(3)
-    
+
 #     with col1:
 #         st.metric(
 #             "📊 Portfolio Beta",
@@ -577,7 +848,7 @@
 #             delta="-0.05 vs Market",
 #             help="Sensitivity to market movements"
 #         )
-    
+
 #     with col2:
 #         st.metric(
 #             "📈 Sharpe Ratio",
@@ -585,7 +856,7 @@
 #             delta="+0.18",
 #             help="Risk-adjusted return"
 #         )
-    
+
 #     with col3:
 #         st.metric(
 #             "📉 Max Drawdown",
@@ -593,10 +864,10 @@
 #             delta="+2.1%",
 #             help="Maximum peak-to-trough decline"
 #         )
-    
+
 #     # Risk decomposition chart
 #     render_risk_decomposition_chart()
-    
+
 #     # Correlation matrix
 #     render_correlation_matrix()
 
@@ -604,11 +875,11 @@
 # def render_risk_decomposition_chart():
 #     """Render risk decomposition chart"""
 #     st.markdown("#### 🔍 Risk Decomposition")
-    
+
 #     # Mock risk factors
 #     risk_factors = ["Market Risk", "Sector Risk", "Stock Specific", "Currency Risk"]
 #     risk_contributions = [45, 25, 20, 10]  # Percentages
-    
+
 #     fig = px.bar(
 #         x=risk_factors,
 #         y=risk_contributions,
@@ -616,25 +887,25 @@
 #         color=risk_contributions,
 #         color_continuous_scale="Reds"
 #     )
-    
+
 #     fig.update_layout(
 #         xaxis_title="Risk Factors",
 #         yaxis_title="Contribution (%)",
 #         height=400
 #     )
-    
+
 #     st.plotly_chart(fig, use_container_width=True)
 
 
 # def render_correlation_matrix():
 #     """Render correlation matrix of holdings"""
 #     st.markdown("#### 🔗 Holdings Correlation Matrix")
-    
+
 #     # Mock correlation data
 #     symbols = ["VIC", "VCB", "HPG", "VNM", "FPT"]
 #     correlations = np.random.uniform(0.1, 0.9, (5, 5))
 #     np.fill_diagonal(correlations, 1.0)  # Perfect self-correlation
-    
+
 #     fig = px.imshow(
 #         correlations,
 #         x=symbols,
@@ -642,7 +913,7 @@
 #         color_continuous_scale="RdBu",
 #         title="Holdings Correlation Matrix"
 #     )
-    
+
 #     fig.update_layout(height=400)
 #     st.plotly_chart(fig, use_container_width=True)
 
@@ -650,13 +921,13 @@
 # def render_performance_tab(analysis_data: Dict):
 #     """Render performance analysis tab"""
 #     st.markdown("#### 📈 Performance Analysis")
-    
+
 #     # Performance chart
 #     render_portfolio_performance_chart()
-    
+
 #     # Performance metrics
 #     render_performance_metrics()
-    
+
 #     # Benchmark comparison
 #     render_benchmark_comparison()
 
@@ -667,12 +938,12 @@
 #     dates = pd.date_range(start="2024-01-01", periods=100, freq="D")
 #     portfolio_returns = np.random.normal(0.001, 0.02, 100)
 #     benchmark_returns = np.random.normal(0.0008, 0.018, 100)
-    
+
 #     portfolio_cumulative = np.cumprod(1 + portfolio_returns) * 100
 #     benchmark_cumulative = np.cumprod(1 + benchmark_returns) * 100
-    
+
 #     fig = go.Figure()
-    
+
 #     fig.add_trace(go.Scatter(
 #         x=dates,
 #         y=portfolio_cumulative,
@@ -680,7 +951,7 @@
 #         name='Portfolio',
 #         line=dict(color='#2a5298', width=2)
 #     ))
-    
+
 #     fig.add_trace(go.Scatter(
 #         x=dates,
 #         y=benchmark_cumulative,
@@ -688,7 +959,7 @@
 #         name='VN-Index',
 #         line=dict(color='#f44336', width=2, dash='dash')
 #     ))
-    
+
 #     fig.update_layout(
 #         title="Portfolio vs Benchmark Performance",
 #         xaxis_title="Date",
@@ -696,20 +967,20 @@
 #         height=500,
 #         hovermode='x unified'
 #     )
-    
+
 #     st.plotly_chart(fig, use_container_width=True)
 
 
 # def render_detailed_report_tab(analysis_data: Dict, portfolio_id: str):
 #     """Render detailed analysis report"""
 #     st.markdown("#### 📋 Detailed Portfolio Report")
-    
+
 #     # Report generation
 #     col1, col2 = st.columns([3, 1])
-    
+
 #     with col1:
 #         st.markdown("Generate a comprehensive portfolio analysis report")
-    
+
 #     with col2:
 #         if st.button("📄 Generate Report", use_container_width=True):
 #             with st.spinner("Generating report..."):
@@ -720,7 +991,7 @@
 #                     file_name=f"portfolio_report_{portfolio_id}_{datetime.now().strftime('%Y%m%d')}.txt",
 #                     mime="text/plain"
 #                 )
-    
+
 #     # Report preview
 #     with st.expander("📖 Report Preview", expanded=False):
 #         render_report_preview(analysis_data, portfolio_id)
@@ -729,7 +1000,7 @@
 # def generate_portfolio_report(analysis_data: Dict, portfolio_id: str) -> str:
 #     """Generate detailed portfolio report"""
 #     report_lines = []
-    
+
 #     report_lines.append("=" * 60)
 #     report_lines.append("CMV TRADING BOT - PORTFOLIO ANALYSIS REPORT")
 #     report_lines.append("=" * 60)
@@ -737,7 +1008,7 @@
 #     report_lines.append(f"Portfolio ID: {portfolio_id}")
 #     report_lines.append(f"Strategy: {analysis_data.get('strategy_type', 'N/A')}")
 #     report_lines.append("")
-    
+
 #     # Portfolio Summary
 #     report_lines.append("PORTFOLIO SUMMARY")
 #     report_lines.append("-" * 20)
@@ -746,7 +1017,7 @@
 #     report_lines.append(f"Available Cash: {format_currency(account_balance.get('available_cash', 0))}")
 #     report_lines.append(f"Cash Ratio: {account_balance.get('cash_ratio', 0):.2f}%")
 #     report_lines.append("")
-    
+
 #     # Current Positions
 #     report_lines.append("CURRENT POSITIONS")
 #     report_lines.append("-" * 20)
@@ -757,18 +1028,18 @@
 #         weight = position.get("weight", {})
 #         weight_pct = weight.get("percentage", 0) if isinstance(weight, dict) else weight
 #         report_lines.append(f"{i:2d}. {symbol:6s} - {quantity:8,d} shares - {weight_pct:6.2f}%")
-    
+
 #     report_lines.append("")
-    
+
 #     # Recommendations
 #     recommendations = analysis_data.get("recommendations", [])
 #     if recommendations:
 #         report_lines.append("TRADE RECOMMENDATIONS")
 #         report_lines.append("-" * 20)
-        
+
 #         buy_recs = [r for r in recommendations if r.get("action") == "BUY"]
 #         sell_recs = [r for r in recommendations if r.get("action") == "SELL"]
-        
+
 #         if buy_recs:
 #             report_lines.append("BUY RECOMMENDATIONS:")
 #             for rec in buy_recs:
@@ -777,7 +1048,7 @@
 #                 target_weight = rec.get("target_weight", {})
 #                 target_pct = target_weight.get("percentage", 0) if isinstance(target_weight, dict) else target_weight
 #                 report_lines.append(f"  - {symbol:6s} (Target: {target_pct:6.2f}%) - Priority: {priority}")
-        
+
 #         if sell_recs:
 #             report_lines.append("SELL RECOMMENDATIONS:")
 #             for rec in sell_recs:
@@ -786,25 +1057,25 @@
 #                 current_weight = rec.get("current_weight", {})
 #                 current_pct = current_weight.get("percentage", 0) if isinstance(current_weight, dict) else current_weight
 #                 report_lines.append(f"  - {symbol:6s} (Current: {current_pct:6.2f}%) - Priority: {priority}")
-    
+
 #     report_lines.append("")
 #     report_lines.append("=" * 60)
 #     report_lines.append("End of Report")
-    
+
 #     return "\n".join(report_lines)
 
 
 # def render_report_preview(analysis_data: Dict, portfolio_id: str):
 #    """Render report preview in the UI"""
-   
+
 #    # Portfolio Overview
 #    st.markdown("##### 📊 Portfolio Overview")
 #    account_balance = analysis_data.get("account_balance", {})
-   
+
 #    overview_data = {
 #        "Metric": [
 #            "Net Asset Value",
-#            "Available Cash", 
+#            "Available Cash",
 #            "Cash Ratio",
 #            "Strategy Type",
 #            "Analysis Date"
@@ -817,46 +1088,46 @@
 #            analysis_data.get("analysis_date", "N/A")
 #        ]
 #    }
-   
+
 #    st.table(pd.DataFrame(overview_data))
-   
+
 #    # Top Holdings Summary
 #    st.markdown("##### 🏆 Top 5 Holdings")
 #    positions = analysis_data.get("current_positions", [])
-   
+
 #    if positions:
 #        top_holdings = []
 #        for position in positions[:5]:
 #            symbol = position.get("symbol", "")
 #            weight = position.get("weight", {})
 #            weight_pct = weight.get("percentage", 0) if isinstance(weight, dict) else weight
-           
+
 #            market_price = position.get("market_price", {})
 #            price_value = market_price.get("amount", 0) if isinstance(market_price, dict) else market_price
-           
+
 #            top_holdings.append({
 #                "Symbol": symbol,
 #                "Weight": f"{weight_pct:.2f}%",
 #                "Price": format_currency(price_value),
 #                "Quantity": f"{position.get('quantity', 0):,}"
 #            })
-       
+
 #        st.table(pd.DataFrame(top_holdings))
-   
+
 #    # Recommendations Summary
 #    recommendations = analysis_data.get("recommendations", [])
 #    if recommendations:
 #        st.markdown("##### 🎯 Recommendations Summary")
-       
+
 #        buy_count = len([r for r in recommendations if r.get("action") == "BUY"])
 #        sell_count = len([r for r in recommendations if r.get("action") == "SELL"])
 #        high_priority = len([r for r in recommendations if r.get("priority") == "HIGH"])
-       
+
 #        rec_summary = {
 #            "Type": ["Buy Recommendations", "Sell Recommendations", "High Priority"],
 #            "Count": [buy_count, sell_count, high_priority]
 #        }
-       
+
 #        st.table(pd.DataFrame(rec_summary))
 
 
@@ -864,22 +1135,22 @@
 # def render_weight_distribution_analysis(positions: List[Dict]):
 #    """Analyze weight distribution of holdings"""
 #    st.markdown("#### ⚖️ Weight Distribution Analysis")
-   
+
 #    if not positions:
 #        return
-   
+
 #    # Extract weights
 #    weights = []
 #    symbols = []
-   
+
 #    for position in positions:
 #        symbol = position.get("symbol", "")
 #        weight = position.get("weight", {})
 #        weight_value = weight.get("percentage", 0) if isinstance(weight, dict) else float(weight) if weight else 0
-       
+
 #        weights.append(weight_value)
 #        symbols.append(symbol)
-   
+
 #    # Weight distribution histogram
 #    fig = px.histogram(
 #        x=weights,
@@ -887,13 +1158,13 @@
 #        title="Weight Distribution Across Holdings",
 #        labels={"x": "Weight (%)", "y": "Number of Holdings"}
 #    )
-   
+
 #    fig.update_layout(height=400)
 #    st.plotly_chart(fig, use_container_width=True)
-   
+
 #    # Weight statistics
 #    col1, col2, col3, col4 = st.columns(4)
-   
+
 #    with col1:
 #        st.metric("📊 Std Deviation", f"{np.std(weights):.2f}%")
 #    with col2:
@@ -907,29 +1178,29 @@
 # def render_holdings_comparison(positions: List[Dict]):
 #    """Compare holdings across different metrics"""
 #    st.markdown("#### 🔍 Holdings Comparison")
-   
+
 #    if not positions:
 #        return
-   
+
 #    # Create comparison table
 #    comparison_data = []
-   
+
 #    for position in positions:
 #        symbol = position.get("symbol", "")
 #        quantity = position.get("quantity", 0)
-       
+
 #        # Handle nested structures
 #        market_price = position.get("market_price", {})
 #        price_value = market_price.get("amount", 0) if isinstance(market_price, dict) else market_price
-       
+
 #        weight = position.get("weight", {})
 #        weight_value = weight.get("percentage", 0) if isinstance(weight, dict) else weight
-       
+
 #        unrealized_profit = position.get("unrealized_profit", {})
 #        profit_value = unrealized_profit.get("amount", 0) if isinstance(unrealized_profit, dict) else unrealized_profit
-       
+
 #        market_value = price_value * quantity
-       
+
 #        comparison_data.append({
 #            "Symbol": symbol,
 #            "Market Value": market_value,
@@ -937,25 +1208,25 @@
 #            "P&L": profit_value,
 #            "P&L %": (profit_value / market_value * 100) if market_value > 0 else 0
 #        })
-   
+
 #    df_comparison = pd.DataFrame(comparison_data)
-   
+
 #    # Sort options
 #    col1, col2 = st.columns(2)
-   
+
 #    with col1:
 #        sort_by = st.selectbox(
 #            "Sort by",
 #            ["Weight", "Market Value", "P&L", "P&L %"],
 #            key="holdings_sort"
 #        )
-   
+
 #    with col2:
 #        ascending = st.checkbox("Ascending order", key="holdings_order")
-   
+
 #    # Sort and display
 #    df_sorted = df_comparison.sort_values(sort_by, ascending=ascending)
-   
+
 #    st.dataframe(
 #        df_sorted,
 #        use_container_width=True,
@@ -972,7 +1243,7 @@
 # def render_performance_metrics():
 #    """Render detailed performance metrics"""
 #    st.markdown("#### 📊 Performance Metrics")
-   
+
 #    # Mock performance data - in real implementation, calculate from actual data
 #    metrics_data = {
 #        "Metric": [
@@ -987,7 +1258,7 @@
 #        ],
 #        "Portfolio": [
 #            "12.5%",
-#            "15.2%", 
+#            "15.2%",
 #            "18.3%",
 #            "1.24",
 #            "1.67",
@@ -998,7 +1269,7 @@
 #        "Benchmark": [
 #            "8.7%",
 #            "11.4%",
-#            "20.1%", 
+#            "20.1%",
 #            "0.89",
 #            "1.21",
 #            "-12.3%",
@@ -1006,7 +1277,7 @@
 #            "-"
 #        ]
 #    }
-   
+
 #    st.dataframe(
 #        pd.DataFrame(metrics_data),
 #        use_container_width=True,
@@ -1017,28 +1288,28 @@
 # def render_benchmark_comparison():
 #    """Render benchmark comparison analysis"""
 #    st.markdown("#### 🏁 Benchmark Comparison")
-   
+
 #    # Performance comparison chart
 #    metrics = ["Return", "Volatility", "Sharpe", "Max DD"]
 #    portfolio_values = [12.5, 18.3, 1.24, -8.5]
 #    benchmark_values = [8.7, 20.1, 0.89, -12.3]
-   
+
 #    fig = go.Figure()
-   
+
 #    fig.add_trace(go.Bar(
 #        name='Portfolio',
 #        x=metrics,
 #        y=portfolio_values,
 #        marker_color='#2a5298'
 #    ))
-   
+
 #    fig.add_trace(go.Bar(
 #        name='VN-Index',
 #        x=metrics,
 #        y=benchmark_values,
 #        marker_color='#f44336'
 #    ))
-   
+
 #    fig.update_layout(
 #        title="Portfolio vs Benchmark Metrics",
 #        xaxis_title="Metrics",
@@ -1046,24 +1317,24 @@
 #        barmode='group',
 #        height=400
 #    )
-   
+
 #    st.plotly_chart(fig, use_container_width=True)
-   
+
 #    # Alpha and Beta analysis
 #    col1, col2 = st.columns(2)
-   
+
 #    with col1:
 #        st.metric(
-#            "📈 Alpha", 
+#            "📈 Alpha",
 #            "3.8%",
 #            delta="vs Benchmark",
 #            help="Excess return relative to benchmark"
 #        )
-   
+
 #    with col2:
 #        st.metric(
 #            "📊 Beta",
-#            "0.91", 
+#            "0.91",
 #            delta="Market sensitivity",
 #            help="Sensitivity to market movements"
 #        )
@@ -1073,13 +1344,13 @@
 # def render_export_options(analysis_data: Dict, portfolio_id: str):
 #    """Render export and sharing options"""
 #    st.markdown("#### 📤 Export & Share")
-   
+
 #    col1, col2, col3 = st.columns(3)
-   
+
 #    with col1:
 #        if st.button("📄 Export PDF", use_container_width=True):
 #            st.info("PDF export functionality coming soon!")
-   
+
 #    with col2:
 #        if st.button("📊 Export Excel", use_container_width=True):
 #            excel_data = prepare_excel_export(analysis_data)
@@ -1089,7 +1360,7 @@
 #                file_name=f"portfolio_analysis_{portfolio_id}.xlsx",
 #                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 #            )
-   
+
 #    with col3:
 #        if st.button("📱 Share Report", use_container_width=True):
 #            share_url = generate_share_url(portfolio_id)
@@ -1101,13 +1372,13 @@
 #    """Prepare Excel export data"""
 #    import io
 #    from openpyxl import Workbook
-   
+
 #    wb = Workbook()
-   
+
 #    # Summary sheet
 #    ws_summary = wb.active
 #    ws_summary.title = "Summary"
-   
+
 #    # Add summary data
 #    account_balance = analysis_data.get("account_balance", {})
 #    ws_summary['A1'] = "Portfolio Summary"
@@ -1117,33 +1388,33 @@
 #    ws_summary['B3'] = account_balance.get("available_cash", 0)
 #    ws_summary['A4'] = "Cash Ratio"
 #    ws_summary['B4'] = account_balance.get("cash_ratio", 0)
-   
+
 #    # Holdings sheet
 #    ws_holdings = wb.create_sheet("Holdings")
 #    ws_holdings['A1'] = "Symbol"
 #    ws_holdings['B1'] = "Quantity"
 #    ws_holdings['C1'] = "Weight %"
 #    ws_holdings['D1'] = "Market Value"
-   
+
 #    positions = analysis_data.get("current_positions", [])
 #    for i, position in enumerate(positions, 2):
 #        ws_holdings[f'A{i}'] = position.get("symbol", "")
 #        ws_holdings[f'B{i}'] = position.get("quantity", 0)
-       
+
 #        weight = position.get("weight", {})
 #        weight_value = weight.get("percentage", 0) if isinstance(weight, dict) else weight
 #        ws_holdings[f'C{i}'] = weight_value
-       
+
 #        market_price = position.get("market_price", {})
 #        price_value = market_price.get("amount", 0) if isinstance(market_price, dict) else market_price
 #        market_value = price_value * position.get("quantity", 0)
 #        ws_holdings[f'D{i}'] = market_value
-   
+
 #    # Save to bytes
 #    excel_buffer = io.BytesIO()
 #    wb.save(excel_buffer)
 #    excel_buffer.seek(0)
-   
+
 #    return excel_buffer.getvalue()
 
 
@@ -1159,15 +1430,15 @@
 #    """Main function to integrate enhanced portfolio analysis"""
 #    # Apply custom CSS
 #    st.markdown(ENHANCED_MAIN_CSS, unsafe_allow_html=True)
-   
+
 #    # Check authentication
 #    if not st.session_state.get("authenticated"):
 #        st.warning("Please log in to access portfolio analysis")
 #        return
-   
+
 #    # Render analysis dashboard
 #    render_portfolio_analysis_dashboard()
-   
+
 #    # Auto-refresh functionality
 #    if st.session_state.get("auto_refresh", False):
 #        st.rerun()

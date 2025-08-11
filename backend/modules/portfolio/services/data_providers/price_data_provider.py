@@ -34,37 +34,32 @@ except Exception as e:
 
 
 class PriceDataProvider:
-    CACHE_TTL = 12 * 3600  # 12 hours in seconds
-    CACHE_PREFIX = "STOCK_PRICE_DF"
+    def __init__(self, prefix: str = "STOCK"):
+        self.prefix = prefix
+        self.cache_ttl = 12 * 3600
 
-    @classmethod
-    async def get_price_data_pivoted(
-        cls, from_date: Optional[str] = None, days_back: int = 63
-    ) -> pd.DataFrame:
+    async def get_market_data(self, from_date: Optional[str] = None) -> pd.DataFrame:
         if from_date is None:
             current_date = TimeUtils.get_current_vn_time()
-            days_back = max(days_back, 63)
-            from_date = (current_date - timedelta(days=days_back)).strftime(
+            from_date = (current_date - timedelta(days=63)).strftime(
                 SQLServerConsts.DATE_FORMAT
             )
 
-        cache_key = cls.generate_cache_key(from_date)
+        cache_key = self.generate_cache_key(from_date)
 
-        cached_data = await cls.get_from_cache(cache_key)
+        cached_data = await self.get_from_cache(cache_key)
         if cached_data is not None:
             LOGGER.info(f"📦 Cache HIT for price data: {cache_key}")
             return cached_data
 
         LOGGER.info(f"💾 Cache MISS for price data: {cache_key} - fetching from DB")
 
-        df_pivoted = await cls.fetch_from_database(from_date)
-        await cls.save_to_cache(cache_key, df_pivoted)
-
+        df_pivoted = await self.fetch_price_data_from_database(from_date)
+        await self.save_to_cache(cache_key, df_pivoted)
         return df_pivoted
 
-    @classmethod
-    def generate_cache_key(cls, from_date: str) -> str:
-        key_components = [cls.CACHE_PREFIX, from_date, "all_symbols"]
+    def generate_cache_key(self, from_date: str) -> str:
+        key_components = [self.prefix, from_date]
 
         current_date = TimeUtils.get_current_vn_time()
         today = current_date.strftime(SQLServerConsts.DATE_FORMAT)
@@ -73,8 +68,7 @@ class PriceDataProvider:
         return ":".join(key_components)
 
     @classmethod
-    async def get_from_cache(cls, cache_key: str) -> Optional[pd.DataFrame]:
-        """Retrieve DataFrame from Redis cache"""
+    async def get_from_cache(self, cache_key: str) -> Optional[pd.DataFrame]:
         try:
             # Use binary connection to avoid decoding issues
             cached_bytes = redis_binary_conn.get(cache_key)
@@ -102,7 +96,6 @@ class PriceDataProvider:
                     LOGGER.warning(
                         f"⚠️ Corrupted cache data for key {cache_key}: {str(decode_error)}"
                     )
-                    # Delete the corrupted cache entry
                     redis_binary_conn.delete(cache_key)
                     return None
 
@@ -110,7 +103,6 @@ class PriceDataProvider:
 
         except Exception as e:
             LOGGER.error(f"❌ Error retrieving from cache {cache_key}: {str(e)}")
-            # Try to clean up potentially corrupted cache entry
             try:
                 redis_binary_conn.delete(cache_key)
                 LOGGER.info(f"🧹 Cleaned up corrupted cache entry: {cache_key}")
@@ -118,8 +110,7 @@ class PriceDataProvider:
                 pass
             return None
 
-    @classmethod
-    async def save_to_cache(cls, cache_key: str, df: pd.DataFrame) -> bool:
+    async def save_to_cache(self, cache_key: str, df: pd.DataFrame) -> bool:
         """Save DataFrame to Redis cache"""
         try:
             if df.empty:
@@ -135,11 +126,11 @@ class PriceDataProvider:
                 )
                 return False
 
-            success = redis_binary_conn.setex(cache_key, cls.CACHE_TTL, df_bytes)
+            success = redis_binary_conn.setex(cache_key, self.cache_ttl, df_bytes)
 
             if success:
                 LOGGER.info(
-                    f"💾 Cached DataFrame: key={cache_key}, shape={df.shape}, size={size_mb:.2f}MB, ttl={cls.CACHE_TTL}s"
+                    f"💾 Cached DataFrame: key={cache_key}, shape={df.shape}, size={size_mb:.2f}MB, ttl={self.cache_ttl}s"
                 )
                 return True
             else:
@@ -150,30 +141,48 @@ class PriceDataProvider:
             LOGGER.error(f"❌ Error saving to cache {cache_key}: {str(e)}")
             return False
 
-
-    @classmethod
-    async def fetch_from_database(cls, from_date: str) -> pd.DataFrame:
+    async def fetch_price_data_from_database(self, from_date: str) -> pd.DataFrame:
         try:
             with mart_session_scope() as mart_session:
 
-                sql_query = f"""
-                    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+                if self.prefix == "STOCK":
+                    sql_query = f"""
+                        SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 
-                    WITH UncommittedData AS (
-                        SELECT 
-                            [ticker] 
-                            ,[date] 
-                            ,[closePriceAdjusted]
-                            ,ROW_NUMBER() OVER (PARTITION BY [ticker], [date] ORDER BY __updatedAt__ DESC) AS rn
-                        FROM [priceVolume].[priceVolume]
-                        WHERE [date] >= '{from_date}'
-                    )
+                        WITH UncommittedData AS (
+                            SELECT 
+                                [ticker] 
+                                ,[date] 
+                                ,[closePriceAdjusted]
+                                ,ROW_NUMBER() OVER (PARTITION BY [ticker], [date] ORDER BY __updatedAt__ DESC) AS rn
+                            FROM [priceVolume].[priceVolume]
+                            WHERE [date] >= '{from_date}'
+                        )
 
-                    SELECT [ticker], [date], [closePriceAdjusted]
-                    FROM UncommittedData
-                    WHERE rn = 1
-                    ORDER BY [date], [ticker];
-                """
+                        SELECT [ticker], [date], [closePriceAdjusted]
+                        FROM UncommittedData
+                        WHERE rn = 1
+                        ORDER BY [date], [ticker];
+                    """
+                elif self.prefix == "INDEX":
+                    sql_query = f"""
+                        SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+                        WITH UncommittedData AS (
+                            SELECT 
+                                [icbCode] 
+                                ,[date] 
+                                ,[closeIndex]
+                                ,ROW_NUMBER() OVER (PARTITION BY [icbCode], [date] ORDER BY __updatedAt__ DESC) AS rn
+                            FROM [priceVolume].[isPriceVolume]
+                            WHERE [icbCode] = 'VNINDEX' AND [date] >= '{from_date}'
+                        )
+
+                        SELECT [icbCode], [date], [closeIndex]
+                        FROM UncommittedData
+                        WHERE rn = 1
+                        ORDER BY [date], [icbCode];
+                    """
 
                 LOGGER.debug(f"🔍 Executing price data query: from_date={from_date}")
 
@@ -182,25 +191,27 @@ class PriceDataProvider:
                     conn = mart_session.connection().connection
 
                     # Fetch data
-                    df_stock = pd.read_sql_query(sql_query, conn)
+                    df = pd.read_sql_query(sql_query, conn)
 
-                    if df_stock.empty:
+                    if df.empty:
                         LOGGER.warning(
                             f"⚠️ No price data found for criteria: from_date={from_date}"
                         )
                         return pd.DataFrame()
 
                     # Pivot the data
-                    df_stock_pivoted = df_stock.pivot(
-                        index="date", columns="ticker", values="closePriceAdjusted"
-                    )
+                    if self.prefix == "STOCK":
+                        df_pivoted = df.pivot(
+                            index="date", columns="ticker", values="closePriceAdjusted"
+                        )
+                    elif self.prefix == "INDEX":
+                        df_pivoted = df[["date", "closeIndex"]].copy()
 
                     LOGGER.info(
-                        f"✅ Fetched price data from DB: shape={df_stock_pivoted.shape}, date_range={from_date} to {df_stock_pivoted.index.max()}"
+                        f"✅ Fetched price data from DB: shape={df_pivoted.shape}, date_range={from_date} to {df_pivoted.index.max()}"
                     )
-
-                    return df_stock_pivoted
+                    return df_pivoted
 
         except Exception as e:
             LOGGER.error(f"❌ Error fetching price data from database: {str(e)}")
-            raise
+            raise e

@@ -41,6 +41,18 @@ async def get_available_symbols(user: JwtPayload = Depends(UserPayload)):
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
 
 
+@portfolio_router.get("/pnl/{portfolio_id}", dependencies=[Depends(auth_guard)])
+async def get_portfolio_by_id(
+    portfolio_id: str, user: JwtPayload = Depends(UserPayload)
+):
+    pnl = await PortfoliosService.get_portfolio_pnl(portfolio_id=portfolio_id)
+    response = SuccessResponse(
+        http_code=200, status_code=200, message=MessageConsts.SUCCESS, data=pnl
+    )
+
+    return JSONResponse(status_code=response.http_code, content=response.to_dict())
+
+
 @portfolio_router.get("/{portfolio_id}", dependencies=[Depends(auth_guard)])
 async def get_portfolio_by_id(
     portfolio_id: str, user: JwtPayload = Depends(UserPayload)
@@ -78,8 +90,7 @@ async def create_custom_portfolio(
 
 @portfolio_router.put("/update", dependencies=[Depends(auth_guard)])
 async def update_portfolio_symbols(
-    payload: UpdatePortfolioDTO,
-    user: JwtPayload = Depends(UserPayload)
+    payload: UpdatePortfolioDTO, user: JwtPayload = Depends(UserPayload)
 ):
     if not payload.symbols or len(payload.symbols) < 2:
         response = BaseResponse(
@@ -92,9 +103,7 @@ async def update_portfolio_symbols(
 
     # Update portfolio symbols
     update_result = await PortfoliosService.update_portfolio_symbols(
-        portfolio_id=payload.portfolio_id,
-        symbols=payload.symbols,
-        user=user
+        portfolio_id=payload.portfolio_id, symbols=payload.symbols, user=user
     )
 
     response = SuccessResponse(
@@ -108,10 +117,7 @@ async def update_portfolio_symbols(
 
 
 @portfolio_router.delete("/{portfolio_id}", dependencies=[Depends(auth_guard)])
-async def delete_portfolio(
-    portfolio_id: str,
-    user: JwtPayload = Depends(UserPayload)
-):
+async def delete_portfolio(portfolio_id: str, user: JwtPayload = Depends(UserPayload)):
     delete_result = await PortfoliosService.delete_portfolio(portfolio_id=portfolio_id)
 
     response = SuccessResponse(
@@ -127,7 +133,9 @@ async def delete_portfolio(
 @portfolio_router.get(
     "/analysis/{broker_account_id}", dependencies=[Depends(auth_guard)]
 )
-async def get_system_analysis(broker_account_id: str, user: JwtPayload = Depends(UserPayload)):
+async def get_system_analysis(
+    broker_account_id: str, user: JwtPayload = Depends(UserPayload)
+):
     analysis_result = await PortfolioAnalysisService.analyze_system_portfolio(
         broker_account_id=broker_account_id
     )
@@ -168,5 +176,3 @@ async def send_portfolio_report_notification(
     )
 
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
-
-
