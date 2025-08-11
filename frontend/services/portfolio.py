@@ -131,8 +131,8 @@ class PortfolioService:
     @staticmethod
     @st.cache_data(ttl=300)  # Cache for 5 minutes
     def get_all_symbols() -> List[str]:
-        """Search for stock symbols (mock implementation)"""
-        # In real implementation, this would call an API to search symbols
+        """Get all available symbols from API"""
+        # Fallback list of Vietnam symbols
         vietnam_symbols = [
             "VIC", "VHM", "VRE", "TCB", "VCB", "BID", "CTG", "MBB",
             "HPG", "MSN", "VNM", "SAB", "GAS", "PLX", "POW", "REE",
@@ -150,40 +150,51 @@ class PortfolioService:
             )
 
             if response.status_code == 200:
-                return response.json().get("data").get("records", [])
+                data = response.json().get("data", {})
+                if isinstance(data, dict) and "records" in data:
+                    # Extract symbols from records
+                    symbols = [record.get("symbol") for record in data["records"] if record.get("symbol")]
+                    return symbols if symbols else vietnam_symbols
+                elif isinstance(data, list):
+                    # Direct list of symbols
+                    return data if data else vietnam_symbols
+                else:
+                    return vietnam_symbols
             elif handle_auth_error(response):
                 return vietnam_symbols
             else:
-                st.error(f"Failed to get analysis: {response.json().get('message')}")
+                # Use fallback symbols on API error
                 return vietnam_symbols
 
         except requests.exceptions.RequestException as e:
+            # Use fallback symbols on network error
+            return vietnam_symbols
             st.error(f"Network error: {str(e)}")
             return None
 
-#     @staticmethod
-#     def update_portfolio_symbols(portfolio_id: str, symbols: List[str]) -> Dict:
-#         """Update symbols in a custom portfolio"""
-#         try:
-#             response = requests.put(
-#                 f"{API_BASE_URL}/portfolio-service/portfolios/{portfolio_id}/symbols",
-#                 json={"symbols": symbols},
-#                 headers=get_auth_headers(),
-#                 timeout=30,
-#             )
+    @staticmethod
+    def update_portfolio_symbols(portfolio_id: str, symbols: List[str]) -> Dict:
+        """Update symbols in a custom portfolio"""
+        try:
+            response = requests.put(
+                f"{API_BASE_URL}/portfolio-service/{portfolio_id}/symbols",
+                json=symbols,  # Send symbols directly as list
+                headers=get_auth_headers(),
+                timeout=30,
+            )
 
-#             if response.status_code == 200:
-#                 # Clear cache after successful update
-#                 PortfolioService.get_my_portfolios.clear()
-#                 return {"success": True}
-#             elif handle_auth_error(response):
-#                 return {"success": False, "error": "Authentication failed"}
-#             else:
-#                 error_msg = response.json().get("message", "Unknown error")
-#                 return {"success": False, "error": error_msg}
+            if response.status_code == 200:
+                # Clear cache after successful update
+                PortfolioService.get_my_portfolios.clear()
+                return {"success": True, "data": response.json().get("data")}
+            elif handle_auth_error(response):
+                return {"success": False, "error": "Authentication failed"}
+            else:
+                error_msg = response.json().get("message", "Unknown error")
+                return {"success": False, "error": error_msg}
 
-#         except requests.exceptions.RequestException as e:
-#             return {"success": False, "error": f"Network error: {str(e)}"}
+        except requests.exceptions.RequestException as e:
+            return {"success": False, "error": f"Network error: {str(e)}"}
 
 #     @staticmethod
 #     def delete_portfolio(portfolio_id: str) -> Dict:

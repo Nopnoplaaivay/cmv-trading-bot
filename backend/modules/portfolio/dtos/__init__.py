@@ -1,2 +1,2 @@
 from .accounts import SetupDNSEAccountDTO, DefaultAccountResponseDTO
-from .portfolio import CreateCustomPortfolioDTO
+from .portfolio import CreateCustomPortfolioDTO, UpdatePortfolioDTO

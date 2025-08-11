@@ -117,10 +117,10 @@ class PortfolioNotificationService:
 
             if success:
                 LOGGER.info(f"Portfolio analysis report sent successfully for account {broker_account_id}")
-                return True
+                return {"message": "Portfolio analysis report sent successfully"}
             else:
                 LOGGER.error(f"Failed to send portfolio analysis report for account {broker_account_id}")
-                return False
+                return {"message": "Failed to send portfolio analysis report"}
 
         except Exception as e:
             LOGGER.error(f"Error sending portfolio analysis report for account {broker_account_id}: {e}")

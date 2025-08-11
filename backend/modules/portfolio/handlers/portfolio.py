@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import Depends, Query
 from httpcore import request
 from starlette.responses import JSONResponse
@@ -11,7 +12,7 @@ from backend.modules.portfolio.services import (
     PortfolioNotificationService,
     PortfoliosService,
 )
-from backend.modules.portfolio.dtos import CreateCustomPortfolioDTO
+from backend.modules.portfolio.dtos import CreateCustomPortfolioDTO, UpdatePortfolioDTO
 from backend.modules.auth.decorators import UserPayload
 from backend.modules.auth.guards import auth_guard
 from backend.modules.auth.types import JwtPayload
@@ -21,15 +22,6 @@ from backend.modules.notifications.telegram import MessageType
 @portfolio_router.get("/me", dependencies=[Depends(auth_guard)])
 async def get_my_portfolios(user: JwtPayload = Depends(UserPayload)):
     portfolios = await PortfoliosService.get_portfolios_by_user_id(user=user)
-    if not portfolios:
-        response = BaseResponse(
-            http_code=404,
-            status_code=404,
-            message=MessageConsts.NOT_FOUND,
-            errors=f"No portfolios found for user {user.userId}",
-        )
-        return JSONResponse(status_code=response.http_code, content=response.to_dict())
-
     response = SuccessResponse(
         http_code=200, status_code=200, message=MessageConsts.SUCCESS, data=portfolios
     )
@@ -40,15 +32,6 @@ async def get_my_portfolios(user: JwtPayload = Depends(UserPayload)):
 @portfolio_router.get("/symbols", dependencies=[Depends(auth_guard)])
 async def get_available_symbols(user: JwtPayload = Depends(UserPayload)):
     available_symbols = await PortfoliosService.get_available_symbols()
-    if not available_symbols:
-        response = BaseResponse(
-            http_code=404,
-            status_code=404,
-            message=MessageConsts.NOT_FOUND,
-            errors="No available symbols found",
-        )
-        return JSONResponse(status_code=response.http_code, content=response.to_dict())
-    
     response = SuccessResponse(
         http_code=200,
         status_code=200,
@@ -65,15 +48,6 @@ async def get_portfolio_by_id(
     portfolio = await PortfoliosService.get_portfolio_by_id(
         portfolio_id=portfolio_id, user=user
     )
-    if not portfolio:
-        response = BaseResponse(
-            http_code=404,
-            status_code=404,
-            message=MessageConsts.NOT_FOUND,
-            errors=f"No portfolios found for user {user.userId}",
-        )
-        return JSONResponse(status_code=response.http_code, content=response.to_dict())
-
     response = SuccessResponse(
         http_code=200, status_code=200, message=MessageConsts.SUCCESS, data=portfolio
     )
@@ -81,31 +55,70 @@ async def get_portfolio_by_id(
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
 
 
-@portfolio_router.post("/custom", dependencies=[Depends(auth_guard)])
+@portfolio_router.post("/create", dependencies=[Depends(auth_guard)])
 async def create_custom_portfolio(
     payload: CreateCustomPortfolioDTO, user: JwtPayload = Depends(UserPayload)
 ):
-    portfolio_id = await PortfoliosService.create_custom_portfolio(
+    create_result = await PortfoliosService.create_portfolio(
         user_id=user.userId,
         portfolio_name=payload.portfolio_name,
         portfolio_desc=payload.portfolio_desc,
         symbols=payload.symbols,
     )
 
-    if not portfolio_id:
-        response = BaseResponse(
-            http_code=400,
-            status_code=400,
-            message=MessageConsts.BAD_REQUEST,
-            errors="Failed to create custom portfolio",
-        )
-        return JSONResponse(status_code=response.http_code, content=response.to_dict())
-
     response = SuccessResponse(
         http_code=201,
         status_code=201,
         message=MessageConsts.CREATED,
-        data={"portfolio_id": portfolio_id},
+        data=create_result,
+    )
+
+    return JSONResponse(status_code=response.http_code, content=response.to_dict())
+
+
+@portfolio_router.put("/update", dependencies=[Depends(auth_guard)])
+async def update_portfolio_symbols(
+    payload: UpdatePortfolioDTO,
+    user: JwtPayload = Depends(UserPayload)
+):
+    if not payload.symbols or len(payload.symbols) < 2:
+        response = BaseResponse(
+            http_code=400,
+            status_code=400,
+            message=MessageConsts.BAD_REQUEST,
+            errors="Portfolio must contain at least 2 symbols",
+        )
+        return JSONResponse(status_code=response.http_code, content=response.to_dict())
+
+    # Update portfolio symbols
+    update_result = await PortfoliosService.update_portfolio_symbols(
+        portfolio_id=payload.portfolio_id,
+        symbols=payload.symbols,
+        user=user
+    )
+
+    response = SuccessResponse(
+        http_code=200,
+        status_code=200,
+        message=MessageConsts.SUCCESS,
+        data=update_result,
+    )
+
+    return JSONResponse(status_code=response.http_code, content=response.to_dict())
+
+
+@portfolio_router.delete("/{portfolio_id}", dependencies=[Depends(auth_guard)])
+async def delete_portfolio(
+    portfolio_id: str,
+    user: JwtPayload = Depends(UserPayload)
+):
+    delete_result = await PortfoliosService.delete_portfolio(portfolio_id=portfolio_id)
+
+    response = SuccessResponse(
+        http_code=200,
+        status_code=200,
+        message=MessageConsts.SUCCESS,
+        data=delete_result,
     )
 
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
@@ -118,15 +131,6 @@ async def get_system_analysis(broker_account_id: str, user: JwtPayload = Depends
     analysis_result = await PortfolioAnalysisService.analyze_system_portfolio(
         broker_account_id=broker_account_id
     )
-    if not analysis_result:
-        response = BaseResponse(
-            http_code=404,
-            status_code=404,
-            message=MessageConsts.NOT_FOUND,
-            errors="Portfolio analysis failed",
-        )
-        return JSONResponse(status_code=response.http_code, content=response.to_dict())
-
     response = SuccessResponse(
         http_code=200,
         status_code=200,
@@ -149,31 +153,20 @@ async def send_portfolio_report_notification(
         default=True, description="Include trade recommendations in report"
     ),
 ):
-    success = await PortfolioNotificationService.send_portfolio_analysis_report(
+    notify_result = await PortfolioNotificationService.send_portfolio_analysis_report(
         broker_account_id=broker_account_id,
         strategy_type=strategy_type,
         include_trade_plan=include_trade_plan,
         message_type=MessageType.CHART,
     )
 
-    if success:
-        response = SuccessResponse(
-            http_code=200,
-            status_code=200,
-            message="Portfolio report sent to Telegram successfully",
-            data={
-                "account_id": broker_account_id,
-                "strategy_type": strategy_type,
-                "notification_sent": True,
-                "include_trade_plan": include_trade_plan,
-            },
-        )
-    else:
-        response = BaseResponse(
-            http_code=500,
-            status_code=500,
-            message=MessageConsts.INTERNAL_SERVER_ERROR,
-            errors="Notification service error",
-        )
+    response = SuccessResponse(
+        http_code=200,
+        status_code=200,
+        message="Portfolio report sent to Telegram successfully",
+        data=notify_result,
+    )
 
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
+
+

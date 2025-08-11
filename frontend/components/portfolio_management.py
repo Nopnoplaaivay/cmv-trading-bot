@@ -134,8 +134,8 @@ def render_portfolio_card(portfolio: Dict):
                     st.rerun()
 
         # Edit mode
-        # if st.session_state.get(f"editing_{portfolio['id']}", False):
-        #     render_edit_portfolio_form(portfolio)
+        if st.session_state.get(f"editing_{portfolio['portfolioId']}", False):
+            render_edit_portfolio_form(portfolio)
 
 
 def render_create_portfolio_form():
@@ -170,15 +170,18 @@ def render_create_portfolio_form():
 
         st.markdown("#### 📈 Select Stocks")
 
-        all_symbols = PortfolioService.get_all_symbols()
-
+        # Initialize all symbols in session state if not already present
+        if "all_symbols" not in st.session_state:
+            st.session_state["all_symbols"] = PortfolioService.get_all_symbols()
+        
+        all_symbols = st.session_state["all_symbols"]
         selected_symbols = st.multiselect(
             "Select Symbols",
             options=all_symbols,
             default=[],
             max_selections=max_positions,
             placeholder="Choose symbols for your portfolio...",
-            help=f"Select up to {max_positions} symbols from available stocks",
+            help=f"Select up to {max_positions} symbols from {len(all_symbols)} available stocks",
         )
 
         if selected_symbols:
@@ -243,30 +246,32 @@ def render_edit_portfolio_form(portfolio: Dict):
     st.markdown("---")
     st.markdown("#### ✏️ Edit Portfolio")
 
-    with st.form(f"edit_portfolio_{portfolio['id']}"):
+    # Initialize all symbols in session state if not already present
+    if "all_symbols" not in st.session_state:
+        st.session_state["all_symbols"] = PortfolioService.get_all_symbols()
+
+    with st.form(f"edit_portfolio_{portfolio['portfolioId']}"):
         # Current symbols
-        current_symbols = portfolio.get('symbols', [])
+        current_symbols = [r['symbol'] for r in portfolio["records"]]
         st.markdown(f"**Current symbols:** {', '.join(current_symbols)}")
 
-        # Symbol management
-        col1, col2 = st.columns([3, 1])
-
-        with col1:
-            new_symbol = st.text_input(
-                "Add new symbol",
-                placeholder="Enter symbol (e.g., VIC)",
-                key=f"new_symbol_{portfolio['id']}"
-            ).upper()
-
-        with col2:
-            add_symbol = st.form_submit_button("➕ Add")
+        # Symbol management - changed to multiselect
+        available_symbols = [s for s in st.session_state["all_symbols"] if s not in current_symbols]
+        
+        new_symbols = st.multiselect(
+            "Add new symbols",
+            options=available_symbols,
+            placeholder="Select symbols to add to portfolio...",
+            key=f"new_symbols_{portfolio['portfolioId']}",
+            help=f"Choose from {len(available_symbols)} available symbols"
+        )
 
         # Remove symbols
         if current_symbols:
             symbols_to_remove = st.multiselect(
                 "Select symbols to remove",
                 options=current_symbols,
-                key=f"remove_symbols_{portfolio['id']}"
+                key=f"remove_symbols_{portfolio['portfolioId']}"
             )
         else:
             symbols_to_remove = []
@@ -280,33 +285,40 @@ def render_edit_portfolio_form(portfolio: Dict):
         with col2:
             cancel_edit = st.form_submit_button("❌ Cancel")
 
-        if add_symbol and new_symbol:
-            if new_symbol not in current_symbols:
-                current_symbols.append(new_symbol)
-                st.success(f"Added {new_symbol}")
-            else:
-                st.warning(f"{new_symbol} already in portfolio")
-
         if save_changes:
-            # Remove selected symbols
-            updated_symbols = [s for s in current_symbols if s not in symbols_to_remove]
+            # Add new symbols to current list
+            updated_symbols = current_symbols.copy()
+            
+            # Add new symbols
+            if new_symbols:
+                for symbol in new_symbols:
+                    if symbol not in updated_symbols:
+                        updated_symbols.append(symbol)
+                
+                st.success(f"Added {len(new_symbols)} new symbols: {', '.join(new_symbols)}")
 
-            if len(updated_symbols) == 0:
-                st.error("Portfolio must contain at least 1 symbol")
+            # Remove selected symbols
+            updated_symbols = [s for s in updated_symbols if s not in symbols_to_remove]
+            
+            if symbols_to_remove:
+                st.info(f"Removed {len(symbols_to_remove)} symbols: {', '.join(symbols_to_remove)}")
+
+            if len(updated_symbols) < 2:
+                st.error("Portfolio must contain at least 2 symbols")
             else:
                 result = PortfolioService.update_portfolio_symbols(
-                    portfolio['id'], updated_symbols
+                    portfolio['portfolioId'], updated_symbols
                 )
 
                 if result['success']:
                     st.success("Portfolio updated successfully!")
-                    st.session_state[f"editing_{portfolio['id']}"] = False
+                    st.session_state[f"editing_{portfolio['portfolioId']}"] = False
                     st.rerun()
                 else:
                     st.error(f"Failed to update: {result['error']}")
 
         if cancel_edit:
-            st.session_state[f"editing_{portfolio['id']}"] = False
+            st.session_state[f"editing_{portfolio['portfolioId']}"] = False
             st.rerun()
 
 

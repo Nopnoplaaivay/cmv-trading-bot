@@ -6,3 +6,7 @@ class CreateCustomPortfolioDTO(BaseDTO):
     portfolio_name: str
     portfolio_desc: str = ""
     symbols: List[str]
+
+class UpdatePortfolioDTO(BaseDTO):
+    portfolio_id: str 
+    symbols: List[str]

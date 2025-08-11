@@ -13,7 +13,9 @@ class PortfolioMetadataRepo(BaseRepo[Dict]):
     @classmethod
     async def get_by_portfolio_id(cls, portfolio_id: str) -> Dict:
         conditions = {cls.entity.portfolioId.name: portfolio_id}
+        print(f"Conditions for getting portfolio by ID: {conditions}")
         records = await cls.get_by_condition(conditions=conditions)
+        print(f"Records found: {records}")
         return records
     
     @classmethod
@@ -21,3 +23,8 @@ class PortfolioMetadataRepo(BaseRepo[Dict]):
         conditions = {cls.entity.userId.name: user_id}
         records = await cls.get_by_condition(conditions=conditions)
         return records
+
+    @classmethod
+    async def delete_by_portfolio_id(cls, portfolio_id: str) -> None:
+        conditions = {cls.entity.portfolioId.name: portfolio_id}
+        await cls.delete(conditions=conditions)

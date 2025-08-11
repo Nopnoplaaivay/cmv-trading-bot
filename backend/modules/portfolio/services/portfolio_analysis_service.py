@@ -107,9 +107,6 @@ class PortfolioAnalysisService:
                         SQLServerConsts.DATE_FORMAT
                     )
 
-
-
-
                     LOGGER.info(
                         f"Sending daily portfolio notification for {next_trading_date_str}"
                     )
@@ -171,7 +168,6 @@ class PortfolioAnalysisService:
                     return serializable_result
 
         except Exception as e:
-            raise e
             LOGGER.error(
                 f"Error in portfolio analysis for account {broker_account_id}: {str(e)}"
             )

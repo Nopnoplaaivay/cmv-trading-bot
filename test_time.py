@@ -45,6 +45,18 @@ async def test_update_portfolio_weights():
     print("Portfolio weights updated successfully.")
 
 
+async def test_metadata_repo():
+    from backend.modules.portfolio.repositories.portfolio_metadata import PortfolioMetadataRepo
+    conditions = {"portfolioId": "CUSTOM-3-PhuAnCut-78bcd64c"}
+    records = await PortfolioMetadataRepo.get_by_condition(conditions=conditions)
+    print(f"Records found: {records}")
+
+
+    all_records = await PortfolioMetadataRepo.get_all()
+    for record in all_records:
+        print(record)
+
+
 def test():
     unique_portfolio_ids = ["CUSTOM-3-PhuNgu-20b9a2cc", "CUSTOM-3-PhuOcCho-50fbf756"]
     portfolio_ids_string = "'" + "','".join(unique_portfolio_ids) + "'"
@@ -53,4 +65,5 @@ def test():
 if __name__ == "__main__":
     import asyncio
     # asyncio.run(test_update_portfolio_weights())
-    test()
+    # test()
+    asyncio.run(test_metadata_repo())

@@ -13,16 +13,17 @@ class PortfoliosRepo(BaseRepo[Dict]):
 
     @classmethod
     async def get_by_portfolio_id(cls, portfolio_id: str) -> Dict:
-        with cls.session_scope() as session:
-            conditions = {cls.entity.portfolioId.name: portfolio_id}
-            records = await cls.get_by_condition(conditions=conditions)
-            session.commit()
+        conditions = {cls.entity.portfolioId.name: portfolio_id}
+        records = await cls.get_by_condition(conditions=conditions)
         return records
     
     @classmethod
     async def get_by_user_id(cls, user_id: int) -> Dict:
-        with cls.session_scope() as session:
-            conditions = {cls.entity.userId.name: user_id}
-            records = await cls.get_by_condition(conditions=conditions)
-            session.commit()
+        conditions = {cls.entity.userId.name: user_id}
+        records = await cls.get_by_condition(conditions=conditions)
         return records
+
+    @classmethod
+    async def delete_by_portfolio_id(cls, portfolio_id: str) -> None:
+        conditions = {cls.entity.portfolioId.name: portfolio_id}
+        await cls.delete(conditions=conditions)

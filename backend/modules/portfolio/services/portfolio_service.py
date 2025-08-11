@@ -86,7 +86,7 @@ class PortfoliosService(BaseDailyService):
         return portfolio_weights_df
 
     @classmethod
-    async def create_custom_portfolio(
+    async def create_portfolio(
         cls,
         user_id: int,
         portfolio_name: str,
@@ -114,7 +114,7 @@ class PortfoliosService(BaseDailyService):
             df_stock_pivoted = await PriceDataProvider.get_price_data_pivoted()
 
             # Validate symbols exist
-            await cls.validate_symbols(symbols, df_stock_pivoted)
+            await cls.validate_symbols(symbols=symbols, df_stock_pivoted=df_stock_pivoted)
 
             df_portfolio = df_stock_pivoted[symbols].copy()
             df_stock_pivoted = df_stock_pivoted.dropna(axis=1, how="all")
@@ -179,7 +179,7 @@ class PortfoliosService(BaseDailyService):
                 )
                 session.commit()
 
-            return 
+            return {"message": f"Portfolio {portfolio_id} created successfully"}
         except Exception as e:
             raise BaseExceptionResponse(
                 http_code=500,
@@ -187,6 +187,104 @@ class PortfoliosService(BaseDailyService):
                 message=MessageConsts.INTERNAL_SERVER_ERROR,
                 errors=str(e)
             )
+
+    @classmethod
+    async def update_portfolio_symbols(
+        cls, 
+        portfolio_id: str, 
+        symbols: List[str],
+        user: JwtPayload
+    ) -> None:
+        try:
+            # First validate that the portfolio exists
+            with cls.repo.session_scope() as session:
+                records = await cls.metadata_repo.get_by_portfolio_id(portfolio_id=portfolio_id)
+                if len(records) == 0:
+                    raise BaseExceptionResponse(
+                        http_code=404,
+                        status_code=404,
+                        message=MessageConsts.NOT_FOUND,
+                        errors=f"Portfolio with ID {portfolio_id} not found",
+                    )
+
+                existing_portfolio = records[0]
+                await cls.repo.delete_by_portfolio_id(portfolio_id=portfolio_id)
+
+                # Get price data for optimization
+                df_stock_pivoted = await PriceDataProvider.get_price_data_pivoted()
+                await cls.validate_symbols(symbols=symbols, df_stock_pivoted=df_stock_pivoted)
+                df_portfolio = df_stock_pivoted[symbols].copy()
+                df_stock_pivoted = df_stock_pivoted.dropna(axis=1, how="all")
+                # filter data with rows 21 days from the latest date
+                if df_portfolio.empty:
+                    raise BaseExceptionResponse(
+                        http_code=404,
+                        status_code=404,
+                        message=MessageConsts.NOT_FOUND,
+                        errors="No stock data available",
+                    )
+                latest_date = df_portfolio.index[-1]
+                days_back = 21 # temporary
+                start_date = pd.to_datetime(latest_date) - pd.Timedelta(days=days_back)
+                last_date = pd.to_datetime(latest_date)
+                df_portfolio = df_portfolio.loc[start_date.strftime(SQLServerConsts.DATE_FORMAT) : last_date.strftime(SQLServerConsts.DATE_FORMAT)]
+
+                x_CEMV, x_CEMV_neutralized, x_CEMV_limited, x_CEMV_neutralized_limit = (
+                    PortfolioOptimizer.optimize(df_portfolio=df_portfolio)
+                )
+                portfolio_id = existing_portfolio[PortfolioMetadata.portfolioId.name]
+
+                # Get portfolio weights
+                portfolio_weights = []
+                for j in range(len(x_CEMV)):
+                    record = {
+                        Portfolios.date.name: latest_date,
+                        Portfolios.symbol.name: df_portfolio.columns[j],
+                        Portfolios.portfolioId.name: portfolio_id,
+                        Portfolios.marketPrice.name: df_portfolio.iloc[-1, j],
+                        Portfolios.initialWeight.name: x_CEMV[j],
+                        Portfolios.neutralizedWeight.name: max(x_CEMV_neutralized[j], 0.0),
+                        Portfolios.limitedWeight.name: max(x_CEMV_limited[j], 0.0),
+                        Portfolios.neutralizedLimitedWeight.name: max(
+                            x_CEMV_neutralized_limit[j], 0.0
+                        ),
+                    }
+                    portfolio_weights.append(record)
+                
+                if len(portfolio_weights) == 0:
+                    raise BaseExceptionResponse(
+                        http_code=400,
+                        status_code=400,
+                        message=MessageConsts.BAD_REQUEST,
+                        errors="No valid portfolio weights calculated for the given symbols",
+                    )
+                
+                # Insert new records using insert_many
+                await cls.repo.insert_many(
+                    portfolio_weights, 
+                    returning=False
+                )
+
+                # Update portfolio metadata 
+                await cls.metadata_repo.update(
+                    record={PortfolioMetadata.portfolioId.name: portfolio_id},
+                    identity_columns=[PortfolioMetadata.portfolioId.name],
+                    returning=False,
+                    text_clauses={"__updatedAt__": TextSQL(SQLServerConsts.GMT_7_NOW_VARCHAR)}
+                )
+                session.commit()
+
+                return {"message": f"Portfolio {portfolio_id} updated successfully"}
+
+            
+        except Exception as e:
+            raise BaseExceptionResponse(
+                http_code=500,
+                status_code=500,
+                message=MessageConsts.INTERNAL_SERVER_ERROR,
+                errors=f"Failed to update portfolio: {str(e)}",
+            )
+
 
     @classmethod
     async def get_portfolio_by_id(cls, portfolio_id: str, user: JwtPayload) -> pd.DataFrame:
@@ -231,82 +329,122 @@ class PortfoliosService(BaseDailyService):
 
     @classmethod
     async def get_portfolios_by_user_id(cls, user: JwtPayload) -> pd.DataFrame:
-        with cls.repo.session_scope() as session:
-            portfolios_metadata = await cls.metadata_repo.get_by_user_id(user_id=user.userId)
-            if not portfolios_metadata:
+        try:
+            with cls.repo.session_scope() as session:
+                portfolios_metadata = await cls.metadata_repo.get_by_user_id(user_id=user.userId)
+                if not portfolios_metadata:
+                    raise BaseExceptionResponse(
+                        http_code=404,
+                        status_code=404,
+                        message=MessageConsts.NOT_FOUND,
+                        errors=f"No portfolios found for user {user.userId}",
+                    )
+                unique_portfolio_ids = set(metadata[PortfolioMetadata.portfolioId.name] for metadata in portfolios_metadata)
+
+
+                condition_str = "'" + "','".join(unique_portfolio_ids) + "'"
+                sql_query = f"""
+                    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+                    WITH UncommittedData AS (
+                        SELECT *
+                        FROM [BotPortfolio].[portfolios]
+                        WHERE [portfolioId] IN ({condition_str})
+                    )
+
+                    SELECT *
+                    FROM UncommittedData
+                """
+
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", UserWarning)
+                    conn = session.connection().connection
+                    df_portfolios = pd.read_sql_query(sql_query, conn)
+
+                session.commit()
+
+            # convert to list of portfolios
+            portfolios_records = df_portfolios.to_dict(orient="records")
+            if not portfolios_records:
                 raise BaseExceptionResponse(
                     http_code=404,
                     status_code=404,
                     message=MessageConsts.NOT_FOUND,
                     errors=f"No portfolios found for user {user.userId}",
                 )
-            unique_portfolio_ids = set(metadata[PortfolioMetadata.portfolioId.name] for metadata in portfolios_metadata)
-
-
-            condition_str = "'" + "','".join(unique_portfolio_ids) + "'"
-            sql_query = f"""
-                SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
-
-                WITH UncommittedData AS (
-                    SELECT *
-                    FROM [BotPortfolio].[portfolios]
-                    WHERE [portfolioId] IN ({condition_str})
+            
+            portfolios = []
+            for portfolio_id in unique_portfolio_ids:
+                portfolio_metadata = next(
+                    (meta for meta in portfolios_metadata if meta[Portfolios.portfolioId.name] == portfolio_id),
+                    None
                 )
-
-                SELECT *
-                FROM UncommittedData
-            """
-
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", UserWarning)
-                conn = session.connection().connection
-                df_portfolios = pd.read_sql_query(sql_query, conn)
-
-            session.commit()
-
-        # convert to list of portfolios
-        portfolios_records = df_portfolios.to_dict(orient="records")
-        if not portfolios_records:
-            raise BaseExceptionResponse(
-                http_code=404,
-                status_code=404,
-                message=MessageConsts.NOT_FOUND,
-                errors=f"No portfolios found for user {user.userId}",
-            )
+                if portfolio_metadata:
+                    portfolios.append({
+                        "portfolioId": portfolio_id,
+                        "metadata": portfolio_metadata,
+                        "records": [
+                            port for port in portfolios_records if port[Portfolios.portfolioId.name] == portfolio_id
+                        ]
+                    })
+            return {"portfolios": portfolios}
         
-        portfolios = []
-        for portfolio_id in unique_portfolio_ids:
-            portfolio_metadata = next(
-                (meta for meta in portfolios_metadata if meta[Portfolios.portfolioId.name] == portfolio_id),
-                None
+        except Exception as e:
+            raise BaseExceptionResponse(
+                http_code=500,
+                status_code=500,
+                message=MessageConsts.INTERNAL_SERVER_ERROR,
+                errors=str(e)
             )
-            if portfolio_metadata:
-                portfolios.append({
-                    "portfolioId": portfolio_id,
-                    "metadata": portfolio_metadata,
-                    "records": [
-                        port for port in portfolios_records if port[Portfolios.portfolioId.name] == portfolio_id
-                    ]
-                })
 
-        return {"portfolios": portfolios}
+    @classmethod
+    async def delete_portfolio(cls, portfolio_id: str) -> None:
+        try:
+            with cls.repo.session_scope() as session:
+                existing_portfolio = await cls.metadata_repo.get_by_portfolio_id(portfolio_id=portfolio_id)
+                if not existing_portfolio:
+                    raise BaseExceptionResponse(
+                        http_code=404,
+                        status_code=404,
+                        message=MessageConsts.NOT_FOUND,
+                        errors=f"No portfolio found with id {portfolio_id}",
+                    )
+
+                await cls.repo.delete_by_portfolio_id(portfolio_id=portfolio_id)
+                await cls.metadata_repo.delete_by_portfolio_id(portfolio_id=portfolio_id)
+                session.commit()
+            return {"message": f"Portfolio {portfolio_id} deleted successfully"}
+        except Exception as e:
+            raise BaseExceptionResponse(
+                http_code=500,
+                status_code=500,
+                message=MessageConsts.INTERNAL_SERVER_ERROR,
+                errors=str(e)
+            )
 
     @classmethod
     async def get_available_symbols(cls) -> pd.DataFrame:
-        """Get available stocks from the database."""
-        df_stock_pivoted = await PriceDataProvider.get_price_data_pivoted()
-        # df_stock_pivoted = df_stock_pivoted.dropna(axis=1, how="all")
-        if df_stock_pivoted.empty:
+        try:
+            df_stock_pivoted = await PriceDataProvider.get_price_data_pivoted()
+            # df_stock_pivoted = df_stock_pivoted.dropna(axis=1, how="all")
+            if df_stock_pivoted.empty:
+                raise BaseExceptionResponse(
+                    http_code=404,
+                    status_code=404,
+                    message=MessageConsts.NOT_FOUND,
+                    errors="No stock data available",
+                )
+
+            available_symbols = df_stock_pivoted.columns.tolist()
+
+            return {"records": available_symbols}
+        except Exception as e:
             raise BaseExceptionResponse(
-                http_code=404,
-                status_code=404,
-                message=MessageConsts.NOT_FOUND,
-                errors="No stock data available",
+                http_code=500,
+                status_code=500,
+                message=MessageConsts.INTERNAL_SERVER_ERROR,
+                errors=str(e)
             )
-
-        available_symbols = df_stock_pivoted.columns.tolist()
-
-        return {"records": available_symbols}
 
     @classmethod
     async def validate_symbols(
@@ -339,3 +477,4 @@ class PortfoliosService(BaseDailyService):
                 message=MessageConsts.BAD_REQUEST,
                 errors=str(e),
             )
+
