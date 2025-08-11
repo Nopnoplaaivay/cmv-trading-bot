@@ -1,11 +1,9 @@
 import streamlit as st
 
-# Configure Streamlit page
 from frontend.utils.config import STREAMLIT_CONFIG
 
 st.set_page_config(**STREAMLIT_CONFIG)
 
-# Import styles and components
 from frontend.styles.main import MAIN_CSS
 from frontend.utils.helpers import init_session_state
 from frontend.components.auth import render_login_page

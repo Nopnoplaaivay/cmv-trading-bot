@@ -105,7 +105,7 @@ class DailyDataPipelineService:
             LOGGER.info("Step 5: Sending portfolio notifications...")
             notification_start = datetime.now()
             notification_result = (
-                await PortfolioNotificationService.send_daily_portfolio_notification()
+                await PortfolioNotificationService.send_daily_system_portfolio()
             )
             notification_duration = (
                 datetime.now() - notification_start

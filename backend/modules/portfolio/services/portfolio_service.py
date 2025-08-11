@@ -333,12 +333,7 @@ class PortfoliosService(BaseDailyService):
             with cls.repo.session_scope() as session:
                 portfolios_metadata = await cls.metadata_repo.get_by_user_id(user_id=user.userId)
                 if not portfolios_metadata:
-                    raise BaseExceptionResponse(
-                        http_code=404,
-                        status_code=404,
-                        message=MessageConsts.NOT_FOUND,
-                        errors=f"No portfolios found for user {user.userId}",
-                    )
+                    return {"portfolios": []}
                 unique_portfolio_ids = set(metadata[PortfolioMetadata.portfolioId.name] for metadata in portfolios_metadata)
 
 
@@ -366,13 +361,8 @@ class PortfoliosService(BaseDailyService):
             # convert to list of portfolios
             portfolios_records = df_portfolios.to_dict(orient="records")
             if not portfolios_records:
-                raise BaseExceptionResponse(
-                    http_code=404,
-                    status_code=404,
-                    message=MessageConsts.NOT_FOUND,
-                    errors=f"No portfolios found for user {user.userId}",
-                )
-            
+                return {"portfolios": []}
+
             portfolios = []
             for portfolio_id in unique_portfolio_ids:
                 portfolio_metadata = next(

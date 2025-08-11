@@ -1,4 +1,5 @@
 import streamlit as st
+
 from frontend.components.enhanced_sidebar import render_enhanced_sidebar
 from frontend.components.portfolio_management import portfolio_management_page
 from frontend.pages.portfolio_analysis import portfolio_analysis_page

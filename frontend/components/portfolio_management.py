@@ -86,8 +86,50 @@ def render_portfolio_list():
         render_portfolio_card(portfolio)
 
 
+@st.dialog("Delete Portfolio")
+def confirm_delete_dialog(portfolio: Dict):
+    """Modal dialog for delete confirmation"""
+    st.markdown(f"### ⚠️ Delete Portfolio")
+    st.error(
+        f"Are you sure you want to delete **{portfolio['metadata']['portfolioName']}**?"
+    )
+    st.markdown("This action cannot be undone!")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("🗑️ Yes, Delete", type="primary", use_container_width=True):
+            with st.spinner("Deleting portfolio..."):
+                result = PortfolioService.delete_portfolio(portfolio["portfolioId"])
+
+            if result["success"]:
+                st.success("✅ Portfolio deleted successfully!")
+                time.sleep(1.5)
+                st.rerun()
+            else:
+                st.error(f"❌ Failed to delete: {result['error']}")
+
+    with col2:
+        if st.button("❌ Cancel", use_container_width=True):
+            st.rerun()
+
+
 def render_portfolio_card(portfolio: Dict):
-    with st.expander(f"📁 {portfolio['metadata']['portfolioName']}", expanded=False):
+    portfolio_id = portfolio["portfolioId"]
+
+    # Keep track of expander state
+    expander_key = f"expander_{portfolio_id}"
+    if expander_key not in st.session_state:
+        st.session_state[expander_key] = False
+
+    # If confirming delete, keep expander open
+    if st.session_state.get(f"confirm_delete_{portfolio_id}", False):
+        st.session_state[expander_key] = True
+
+    with st.expander(
+        f"📁 {portfolio['metadata']['portfolioName']}",
+        expanded=st.session_state[expander_key],
+    ):
         col1, col2, col3 = st.columns([2, 2, 1])
 
         with col1:
@@ -112,26 +154,12 @@ def render_portfolio_card(portfolio: Dict):
         with col3:
             if st.button("✏️ Edit", key=f"edit_{portfolio['portfolioId']}"):
                 st.session_state[f"editing_{portfolio['portfolioId']}"] = True
+                st.session_state[expander_key] = True  # Keep expander open
                 st.rerun()
 
+            # Delete button - show modal dialog
             if st.button("🗑️ Delete", key=f"delete_{portfolio['portfolioId']}"):
-                if st.session_state.get(
-                    f"confirm_delete_{portfolio['portfolioId']}", False
-                ):
-                    # Actually delete
-                    result = PortfolioService.delete_portfolio(portfolio["portfolioId"])
-                    if result["success"]:
-                        st.success("Portfolio deleted successfully!")
-                        st.rerun()
-                    else:
-                        st.error(f"Failed to delete: {result['error']}")
-                else:
-                    # Ask for confirmation
-                    st.session_state[f"confirm_delete_{portfolio['portfolioId']}"] = (
-                        True
-                    )
-                    st.warning("Click again to confirm deletion!")
-                    st.rerun()
+                confirm_delete_dialog(portfolio)
 
         # Edit mode
         if st.session_state.get(f"editing_{portfolio['portfolioId']}", False):
@@ -173,7 +201,7 @@ def render_create_portfolio_form():
         # Initialize all symbols in session state if not already present
         if "all_symbols" not in st.session_state:
             st.session_state["all_symbols"] = PortfolioService.get_all_symbols()
-        
+
         all_symbols = st.session_state["all_symbols"]
         selected_symbols = st.multiselect(
             "Select Symbols",
@@ -231,39 +259,34 @@ def render_create_portfolio_form():
                     st.success(f"✅ Portfolio '{portfolio_name}' created successfully!")
                     st.balloons()
 
-                    # Show portfolio info
-                    st.info(f"Portfolio ID: `{result['data']['portfolio_id']}`")
-
                     # Auto-refresh portfolio list
-                    time.sleep(2)
+                    time.sleep(1)
                     st.rerun()
                 else:
                     st.error(f"❌ Failed to create portfolio: {result['error']}")
 
 
 def render_edit_portfolio_form(portfolio: Dict):
-    """Render edit form for portfolio"""
     st.markdown("---")
     st.markdown("#### ✏️ Edit Portfolio")
 
-    # Initialize all symbols in session state if not already present
     if "all_symbols" not in st.session_state:
         st.session_state["all_symbols"] = PortfolioService.get_all_symbols()
 
     with st.form(f"edit_portfolio_{portfolio['portfolioId']}"):
-        # Current symbols
-        current_symbols = [r['symbol'] for r in portfolio["records"]]
+        current_symbols = [r["symbol"] for r in portfolio["records"]]
         st.markdown(f"**Current symbols:** {', '.join(current_symbols)}")
 
-        # Symbol management - changed to multiselect
-        available_symbols = [s for s in st.session_state["all_symbols"] if s not in current_symbols]
-        
+        available_symbols = [
+            s for s in st.session_state["all_symbols"] if s not in current_symbols
+        ]
+
         new_symbols = st.multiselect(
             "Add new symbols",
             options=available_symbols,
             placeholder="Select symbols to add to portfolio...",
             key=f"new_symbols_{portfolio['portfolioId']}",
-            help=f"Choose from {len(available_symbols)} available symbols"
+            help=f"Choose from {len(available_symbols)} available symbols",
         )
 
         # Remove symbols
@@ -271,14 +294,12 @@ def render_edit_portfolio_form(portfolio: Dict):
             symbols_to_remove = st.multiselect(
                 "Select symbols to remove",
                 options=current_symbols,
-                key=f"remove_symbols_{portfolio['portfolioId']}"
+                key=f"remove_symbols_{portfolio['portfolioId']}",
             )
         else:
             symbols_to_remove = []
 
-        # Form actions
         col1, col2, col3 = st.columns(3)
-
         with col1:
             save_changes = st.form_submit_button("💾 Save Changes", type="primary")
 
@@ -286,39 +307,48 @@ def render_edit_portfolio_form(portfolio: Dict):
             cancel_edit = st.form_submit_button("❌ Cancel")
 
         if save_changes:
-            # Add new symbols to current list
             updated_symbols = current_symbols.copy()
-            
-            # Add new symbols
+
             if new_symbols:
                 for symbol in new_symbols:
                     if symbol not in updated_symbols:
                         updated_symbols.append(symbol)
-                
-                st.success(f"Added {len(new_symbols)} new symbols: {', '.join(new_symbols)}")
 
-            # Remove selected symbols
+                st.success(
+                    f"Added {len(new_symbols)} new symbols: {', '.join(new_symbols)}"
+                )
+
             updated_symbols = [s for s in updated_symbols if s not in symbols_to_remove]
-            
+
             if symbols_to_remove:
-                st.info(f"Removed {len(symbols_to_remove)} symbols: {', '.join(symbols_to_remove)}")
+                st.info(
+                    f"Removed {len(symbols_to_remove)} symbols: {', '.join(symbols_to_remove)}"
+                )
 
             if len(updated_symbols) < 2:
                 st.error("Portfolio must contain at least 2 symbols")
             else:
                 result = PortfolioService.update_portfolio_symbols(
-                    portfolio['portfolioId'], updated_symbols
+                    portfolio["portfolioId"], updated_symbols
                 )
 
-                if result['success']:
+                if result["success"]:
                     st.success("Portfolio updated successfully!")
                     st.session_state[f"editing_{portfolio['portfolioId']}"] = False
+                    # Keep expander open after successful update
+                    expander_key = f"expander_{portfolio['portfolioId']}"
+                    if expander_key in st.session_state:
+                        st.session_state[expander_key] = True
                     st.rerun()
                 else:
                     st.error(f"Failed to update: {result['error']}")
 
         if cancel_edit:
             st.session_state[f"editing_{portfolio['portfolioId']}"] = False
+            # Keep expander open when exiting edit mode
+            expander_key = f"expander_{portfolio['portfolioId']}"
+            if expander_key in st.session_state:
+                st.session_state[expander_key] = True
             st.rerun()
 
 
