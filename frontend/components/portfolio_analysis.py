@@ -8,7 +8,7 @@ from datetime import datetime
 from frontend.services.portfolio import PortfolioService
 
 
-def portfolio_analysis_page():
+def render_portfolio_analysis_page():
     """Portfolio analysis page with risk metrics and comparison charts"""
     st.subheader("📈 Portfolio Analysis")
 
