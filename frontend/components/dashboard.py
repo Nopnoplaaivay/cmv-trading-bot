@@ -1,6 +1,6 @@
 import streamlit as st
 
-from frontend.components.enhanced_sidebar import render_enhanced_sidebar
+from frontend.components.sidebar import render_sidebar
 from frontend.components.portfolio_management import portfolio_management_page
 from frontend.pages.portfolio_analysis import portfolio_analysis_page
 from frontend.pages.trade_execution import trade_execution_page
@@ -15,11 +15,11 @@ def render_dashboard():
         unsafe_allow_html=True,
     )
 
-    render_enhanced_sidebar()
+    render_sidebar()
 
     if "current_page" not in st.session_state:
         st.session_state.current_page = "Portfolio Analysis"
-        
+
     if st.session_state.current_page == "Portfolio Analysis":
         portfolio_analysis_page()
     elif st.session_state.current_page == "Portfolio Management":

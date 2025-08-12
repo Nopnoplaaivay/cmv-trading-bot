@@ -6,7 +6,7 @@ from frontend.components.portfolio import (
     display_current_positions,
     display_weight_comparison_chart,
 )
-from frontend.components.portfolio_analysis_enhanced import (
+from frontend.components.portfolio_analysis import (
     portfolio_analysis_page as enhanced_analysis_page,
 )
 from ..components.recommendations import display_recommendations_tab

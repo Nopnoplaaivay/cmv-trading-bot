@@ -5,16 +5,19 @@ from backend.common.responses.exceptions.base_exceptions import BaseExceptionRes
 from backend.modules.base_trading_client import BaseTradingClient
 
 
+LOGGER_PREFIX = "[DNSE_API]"
+
+
 class UsersClient(BaseTradingClient):
     async def get_users_info(self) -> Optional[Dict]:
         url = f"{self.config.base_url}/user-service/api/me"
         
         try:
             result = await self.make_request("GET", url)
-            self.log_success("Get user's info successfully", result)
+            self.log_success(f"{LOGGER_PREFIX} Get user's info successfully", result)
             return result
         except Exception as e:
-            self.log_error("Failed to get user's info", e)
+            self.log_error(f"{LOGGER_PREFIX} Failed to get user's info", e)
             raise BaseExceptionResponse(
                 http_code=502,
                 status_code=502,
@@ -27,10 +30,10 @@ class UsersClient(BaseTradingClient):
         
         try:
             result = await self.make_request("GET", url)
-            self.log_success("Get user's accounts successfully", result)
+            self.log_success(f"{LOGGER_PREFIX} Get user's accounts successfully", result)
             return result
         except Exception as e:
-            self.log_error("Failed to get user's accounts", e)
+            self.log_error(f"{LOGGER_PREFIX} Failed to get user's accounts", e)
             raise BaseExceptionResponse(
                 http_code=502,
                 status_code=502,
@@ -44,10 +47,10 @@ class UsersClient(BaseTradingClient):
         
         try:
             result = await self.make_request("GET", url, params=params)
-            self.log_success("Get buying power successfully", result)
+            self.log_success(f"{LOGGER_PREFIX} Get buying power successfully", result)
             return result
         except Exception as e:
-            self.log_error("Failed to get buying power", e)
+            self.log_error(f"{LOGGER_PREFIX} Failed to get buying power", e)
             raise BaseExceptionResponse(
                 http_code=502,
                 status_code=502,
@@ -60,10 +63,10 @@ class UsersClient(BaseTradingClient):
         
         try:
             result = await self.make_request("GET", url)
-            self.log_success("Get account balance successfully", result)
+            self.log_success(f"{LOGGER_PREFIX} Get account balance successfully", result)
             return result
         except Exception as e:
-            self.log_error("Failed to get account balance", e)
+            self.log_error(f"{LOGGER_PREFIX} Failed to get account balance", e)
             raise BaseExceptionResponse(
                 http_code=502,
                 status_code=502,
@@ -76,10 +79,10 @@ class UsersClient(BaseTradingClient):
         
         try:
             result = await self.make_request("GET", url)
-            self.log_success("Get account deals successfully", result)
+            self.log_success(f"{LOGGER_PREFIX} Get account deals successfully", result)
             return result
         except Exception as e:
-            self.log_error("Failed to get account deals", e)
+            self.log_error(f"{LOGGER_PREFIX} Failed to get account deals", e)
             raise BaseExceptionResponse(
                 http_code=502,
                 status_code=502,

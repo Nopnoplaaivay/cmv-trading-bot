@@ -9,6 +9,8 @@ from backend.utils.logger import LOGGER
 pyodbc.pooling = False
 
 
+LOGGER_PREFIX = "[SQLServer]"
+
 class SQLServerConnectorPool:
     def __init__(self, dns, max_conn, min_conn):
         self.dns = dns
@@ -28,7 +30,7 @@ class SQLServerConnectorPool:
         try:
             session = self.get()
             self.put(session)
-            LOGGER.info("Successfully create connection...")
+            LOGGER.info(f"{LOGGER_PREFIX} Successfully created connection...")
         except Exception as e:
             raise Exception(f"Could not create connection to {dns}", e)
             pass

@@ -137,12 +137,12 @@ GO
 
 CREATE TABLE [BotPortfolio].[portfolioMetadata] (
     [portfolioId] NVARCHAR(50) PRIMARY KEY,
-    [userId] INT NOT NULL,
+    [userId] INT,
     [portfolioName] NVARCHAR(100) NOT NULL,
-    [portfolioType] VARCHAR(50) DEFAULT 'General',
+    [portfolioType] VARCHAR(50) DEFAULT 'SYSTEM' NOT NULL,
     [portfolioDesc] NVARCHAR(500),
-    [algorithm] VARCHAR(50) DEFAULT 'CMV',
-    [isActive] BIT DEFAULT 1,
+    [algorithm] VARCHAR(50) DEFAULT 'CMV' NOT NULL,
+    [isActive] BIT DEFAULT 1 NOT NULL,
     [__createdAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL,
     [__updatedAt__] VARCHAR(19) default (format(switchoffset(sysutcdatetime(),'+07:00'),'yyyy-MM-dd HH:mm:ss')) NOT NULL
 );

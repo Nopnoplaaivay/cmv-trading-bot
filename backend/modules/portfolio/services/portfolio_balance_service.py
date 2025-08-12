@@ -13,17 +13,17 @@ from backend.utils.logger import LOGGER
 from backend.utils.time_utils import TimeUtils
 
 
+LOGGER_PREFIX = "[BalanceService]"
+
+
 class BalanceService:
     repo = BalancesRepo
     accounts_repo = AccountsRepo
 
     @classmethod
     async def update_newest_balances_daily(cls) -> bool:
-        """Update balance for a all account"""
         try:
-            LOGGER.info(f"Updating balance for all accounts")
 
-            # Get account details
             existing_accounts = await cls.accounts_repo.get_all()
             existing_accounts = [
                 account
@@ -45,7 +45,7 @@ class BalanceService:
                 # Get current balance from DNSE API
                 async with TradingSession(account=custody_code) as session:
                     if not await session.authenticate(password=password):
-                        LOGGER.error(f"Authentication failed for account {custody_code}")
+                        LOGGER.error(f"{LOGGER_PREFIX} Authentication failed for account {custody_code}")
                         raise BaseExceptionResponse(
                             http_code=404,
                             status_code=404,
@@ -57,7 +57,7 @@ class BalanceService:
                         balance_dict = await users_client.get_account_balance(account_no=broker_account_id)
 
                         if not balance_dict:
-                            LOGGER.warning(f"No balance data found for account {broker_account_id}")
+                            LOGGER.warning(f"{LOGGER_PREFIX} No balance data found for account {broker_account_id}")
                             continue
 
                         # Prepare balance data
@@ -83,9 +83,9 @@ class BalanceService:
                         },
                     )
                     session.commit()
-                    LOGGER.info(f"Balances updated successfully for {len(data)} accounts")
+                    LOGGER.info(f"{LOGGER_PREFIX} Balances updated successfully for {len(data)} accounts")
                 else:
-                    LOGGER.warning("No balance data to update")
+                    LOGGER.warning(f"{LOGGER_PREFIX} No balance data to update")
 
             return {"success": True}
 

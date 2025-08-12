@@ -35,6 +35,14 @@ def portfolio_analysis_page():
         st.error("Failed to load portfolio data.")
         return
 
+    # Add cache management
+    col1, col2 = st.columns([4, 1])
+    with col2:
+        if st.button("🗑️ Clear Cache", help="Clear cached data to force refresh"):
+            clear_portfolio_cache(selected_portfolio_id)
+            st.success("Cache cleared!")
+            st.rerun()
+
     # Create tabs for different analysis views
     tab1, tab2, tab3 = st.tabs(
         ["📊 Performance Chart", "📋 Risk Metrics", "📈 Detailed Analysis"]
@@ -55,35 +63,17 @@ def load_portfolio_data_cached(portfolio_id: str, strategy: str) -> Optional[Dic
     cache_key = f"portfolio_data_{portfolio_id}_{strategy}"
     cache_time_key = f"portfolio_data_time_{portfolio_id}_{strategy}"
 
-    # Check cache age and warn if data might be stale
-    cache_time = st.session_state.get(cache_time_key)
-    cache_exists = cache_key in st.session_state
-
-    if cache_exists and cache_time:
-        age_minutes = (datetime.now() - cache_time).total_seconds() / 60
-        if age_minutes > 5:  # Warn if data is older than 5 minutes
-            st.warning(
-                f"⚠️ Cached data is {age_minutes:.1f} minutes old. Consider refreshing."
-            )
-        else:
-            st.info(f"📅 Using cached data from: {cache_time.strftime('%H:%M:%S')}")
-
-    # Force refresh button - always available
-    col1, col2 = st.columns([4, 1])
-    with col2:
-        force_refresh = st.button(
-            "🔄 Refresh",
-            key=f"refresh_data_{portfolio_id}_{strategy}",
-            help="Force refresh portfolio data from server",
-        )
+    # Show cache status if exists
+    if cache_key in st.session_state and cache_time_key in st.session_state:
+        cache_time = st.session_state[cache_time_key]
+        st.info(f"📅 Using cached data from: {cache_time.strftime('%H:%M:%S')}")
 
     # Load data if not cached or force refresh
-    if not cache_exists or force_refresh:
+    if cache_key not in st.session_state or st.button(
+        "🔄 Refresh Data", key=f"refresh_data_{portfolio_id}_{strategy}"
+    ):
         with st.spinner("Loading portfolio data..."):
             try:
-                # Clear service-level cache first to get fresh data
-                PortfolioService.get_portfolio_pnl.clear()
-
                 # Get PnL data from API - this includes all data we need
                 pnl_data = PortfolioService.get_portfolio_pnl(portfolio_id, strategy)
 

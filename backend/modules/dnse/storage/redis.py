@@ -9,6 +9,10 @@ from backend.redis.client import REDIS_CLIENT
 from backend.utils.logger import LOGGER
 from backend.utils.time_utils import TimeUtils
 
+
+LOGGER_PREFIX = "[Redis]"
+
+
 try:
     conn = REDIS_CLIENT.get_conn()
     REDIS_AVAILABLE = True
@@ -29,7 +33,7 @@ class RedisTokenStorage(BaseTokenStorage):
 
     async def save_token(self, token_data: TradingTokens) -> None:
         if not REDIS_AVAILABLE:
-            LOGGER.warning("Redis is not available, cannot save token")
+            LOGGER.warning(f"{LOGGER_PREFIX} Redis is not available, cannot save token")
             return
 
         try:
@@ -48,23 +52,21 @@ class RedisTokenStorage(BaseTokenStorage):
                 else:
                     token_data_dict["createdAt"] = current_time
 
-                LOGGER.info(f"Updating existing token for account {token_data.account}")
             else:
                 token_data_dict["id"] = str(uuid4())
                 token_data_dict["createdAt"] = current_time
                 token_data_dict["updatedAt"] = current_time
-                LOGGER.info(f"Creating new token for account {token_data.account}")
 
             # Filter out None values for Redis storage
             redis_data = {k: v for k, v in token_data_dict.items() if v is not None}
             
             conn.hset(token_key, mapping=redis_data)
             LOGGER.info(
-                f"Token for account {token_data.account} saved to Redis successfully."
+                f"{LOGGER_PREFIX} Token for account {token_data.account} saved successfully."
             )
 
         except Exception as e:
-            LOGGER.error(f"Error saving token to Redis: {e}")
+            LOGGER.error(f"{LOGGER_PREFIX} Error saving token to Redis: {e}")
             raise BaseExceptionResponse(
                 http_code=500,
                 status_code=500,
@@ -84,7 +86,7 @@ class RedisTokenStorage(BaseTokenStorage):
             data = conn.hgetall(token_key)
 
             if not data:
-                LOGGER.info(f"No token found for account {account} in broker {broker}")
+                LOGGER.info(f"{LOGGER_PREFIX} No token found for account {account} in broker {broker}")
                 return None
 
             pattern_key = self._get_pattern_key(account)
@@ -103,11 +105,11 @@ class RedisTokenStorage(BaseTokenStorage):
                 )
 
             token = TradingTokens.from_dict(data)
-            LOGGER.info(f"Token loaded for account {account} from Redis successfully")
+            LOGGER.info(f"{LOGGER_PREFIX} Token loaded for account {account} from Redis successfully")
             return token
 
         except Exception as e:
-            LOGGER.error(f"Error loading token from Redis: {e}")
+            LOGGER.error(f"{LOGGER_PREFIX} Error loading token from Redis: {e}")
             raise BaseExceptionResponse(
                 http_code=500,
                 status_code=500,
@@ -117,7 +119,7 @@ class RedisTokenStorage(BaseTokenStorage):
 
     async def delete_token(self, account: str, broker: str = "DNSE") -> None:
         if not REDIS_AVAILABLE:
-            LOGGER.warning("Redis is not available, cannot delete token")
+            LOGGER.warning(f"{LOGGER_PREFIX} Redis is not available, cannot delete token")
             return
 
         try:
@@ -126,7 +128,7 @@ class RedisTokenStorage(BaseTokenStorage):
             existing_data = conn.hgetall(token_key)
             if not existing_data:
                 LOGGER.warning(
-                    f"No token found for account {account} in broker {broker}."
+                    f"{LOGGER_PREFIX} No token found for account {account} in broker {broker}."
                 )
                 return
 
@@ -148,17 +150,17 @@ class RedisTokenStorage(BaseTokenStorage):
             result = conn.delete(token_key)
             if result > 0:
                 LOGGER.info(
-                    f"Token for account {account} deleted from Redis successfully."
+                    f"{LOGGER_PREFIX} Token for account {account} deleted successfully."
                 )
             else:
                 LOGGER.warning(
-                    f"Token for account {account} was not found during deletion."
+                    f"{LOGGER_PREFIX} Token for account {account} was not found during deletion."
                 )
 
         except BaseExceptionResponse:
             raise
         except Exception as e:
-            LOGGER.error(f"Error deleting token from Redis: {e}")
+            LOGGER.error(f"{LOGGER_PREFIX} Error deleting token from Redis: {e}")
             raise BaseExceptionResponse(
                 http_code=500,
                 status_code=500,
@@ -168,13 +170,13 @@ class RedisTokenStorage(BaseTokenStorage):
 
     async def cleanup(self) -> None:
         if not REDIS_AVAILABLE:
-            LOGGER.warning("Redis is not available, cannot cleanup")
+            LOGGER.warning(f"{LOGGER_PREFIX} Redis is not available, cannot cleanup")
             return
         try:
             conn.close()
-            LOGGER.info(f"Closed connection to Redis.")
+            LOGGER.info(f"{LOGGER_PREFIX} Closed connection to Redis.")
         except Exception as e:
-            LOGGER.error(f"Error closing connection to Redis: {e}")
+            LOGGER.error(f"{LOGGER_PREFIX} Error closing connection to Redis: {e}")
             raise BaseExceptionResponse(
                 http_code=500,
                 status_code=500,

@@ -9,6 +9,9 @@ from backend.utils.logger import LOGGER
 from backend.utils.time_utils import TimeUtils
 
 
+LOGGER_PREFIX = "[DealsService]"
+
+
 class DealsService:
     repo = DealsRepo
     accounts_repo = AccountsRepo
@@ -17,9 +20,6 @@ class DealsService:
     async def update_newest_deals_daily(cls) -> bool:
         """Update deals for all accounts"""
         try:
-            LOGGER.info(f"Updating deals for all accounts")
-
-            # Get account details
             existing_accounts = await cls.accounts_repo.get_all()
             existing_accounts = [
                 account
@@ -28,7 +28,7 @@ class DealsService:
             ]
 
             if len(existing_accounts) == 0:
-                LOGGER.warning(f"No account found")
+                LOGGER.warning(f"{LOGGER_PREFIX} No account found")
                 return False
 
 
@@ -41,18 +41,16 @@ class DealsService:
                 # Get current balance from DNSE API
                 async with TradingSession(account=custody_code) as session:
                     if not await session.authenticate(password=password):
-                        LOGGER.error(f"Authentication failed for account {custody_code}")
+                        LOGGER.error(f"{LOGGER_PREFIX} Authentication failed for account {custody_code}")
                         return False
 
                     async with session.users_client() as users_client:
                         deals_raw = await users_client.get_account_deals(account_no=broker_account_id)
 
                         if not deals_raw:
-                            LOGGER.warning(f"No deals data found for account {broker_account_id}")
                             continue
 
                         if len(deals_raw["deals"]) == 0:
-                            LOGGER.warning(f"No deals data found for account {broker_account_id}")
                             continue
 
                         # Prepare deals data
@@ -64,7 +62,6 @@ class DealsService:
                             for deal in deals_raw["deals"]
                         ]
                         if not deals_list:
-                            LOGGER.warning(f"No deals data found for account {broker_account_id}")
                             continue
 
                         data.extend(deals_list)
@@ -83,9 +80,9 @@ class DealsService:
                         },
                     )
                     session.commit()
-                    LOGGER.info(f"Deals updated successfully for {len(data)} accounts")
+                    LOGGER.info(f"{LOGGER_PREFIX} Deals updated successfully for {len(data)} accounts")
                 else:
-                    LOGGER.warning("No deals data to update")
+                    LOGGER.warning(f"{LOGGER_PREFIX} No deals data to update")
 
             return {"success": True}
 

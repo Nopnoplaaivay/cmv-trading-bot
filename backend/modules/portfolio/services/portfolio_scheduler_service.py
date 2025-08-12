@@ -26,7 +26,7 @@ class PortfolioSchedulerService:
 
         while True:
             schedule.run_pending()
-            print(
+            LOGGER.info(
                 f"Scheduler running at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             )
             await asyncio.sleep(60)  # Check every minute

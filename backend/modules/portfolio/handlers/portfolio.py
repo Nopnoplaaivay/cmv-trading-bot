@@ -28,6 +28,15 @@ async def get_my_portfolios(user: JwtPayload = Depends(UserPayload)):
 
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
 
+@portfolio_router.get("/system", dependencies=[Depends(auth_guard)])
+async def get_system_portfolios(user: JwtPayload = Depends(UserPayload)):
+    portfolios = await PortfoliosService.get_system_portfolios()
+    response = SuccessResponse(
+        http_code=200, status_code=200, message=MessageConsts.SUCCESS, data=portfolios
+    )
+
+    return JSONResponse(status_code=response.http_code, content=response.to_dict())
+
 
 @portfolio_router.get("/symbols", dependencies=[Depends(auth_guard)])
 async def get_available_symbols(user: JwtPayload = Depends(UserPayload)):
@@ -42,7 +51,7 @@ async def get_available_symbols(user: JwtPayload = Depends(UserPayload)):
 
 
 @portfolio_router.get("/pnl/{portfolio_id}", dependencies=[Depends(auth_guard)])
-async def get_portfolio_by_id(
+async def get_portfolios_by_id(
     portfolio_id: str, user: JwtPayload = Depends(UserPayload)
 ):
     pnl = await PortfoliosService.get_portfolio_pnl(portfolio_id=portfolio_id)
@@ -54,10 +63,10 @@ async def get_portfolio_by_id(
 
 
 @portfolio_router.get("/{portfolio_id}", dependencies=[Depends(auth_guard)])
-async def get_portfolio_by_id(
+async def get_portfolios_by_id(
     portfolio_id: str, user: JwtPayload = Depends(UserPayload)
 ):
-    portfolio = await PortfoliosService.get_portfolio_by_id(
+    portfolio = await PortfoliosService.get_portfolios_by_id(
         portfolio_id=portfolio_id, user=user
     )
     response = SuccessResponse(
@@ -89,7 +98,7 @@ async def create_custom_portfolio(
 
 
 @portfolio_router.put("/update", dependencies=[Depends(auth_guard)])
-async def update_portfolio_symbols(
+async def update_portfolio(
     payload: UpdatePortfolioDTO, user: JwtPayload = Depends(UserPayload)
 ):
     if not payload.symbols or len(payload.symbols) < 2:
@@ -102,7 +111,7 @@ async def update_portfolio_symbols(
         return JSONResponse(status_code=response.http_code, content=response.to_dict())
 
     # Update portfolio symbols
-    update_result = await PortfoliosService.update_portfolio_symbols(
+    update_result = await PortfoliosService.update_portfolio(
         portfolio_id=payload.portfolio_id, symbols=payload.symbols, user=user
     )
 

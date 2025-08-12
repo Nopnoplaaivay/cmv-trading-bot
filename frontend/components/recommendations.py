@@ -77,7 +77,12 @@ def display_recommendation_cards(recommendations: List[Dict], action_type: str):
 
         with col1:
             key = f"{action_type}_{rec['symbol']}_{i}"
-            selected = st.checkbox("", key=key, value=rec.get("selected", False))
+            selected = st.checkbox(
+                "Select",
+                key=key,
+                value=rec.get("selected", False),
+                label_visibility="hidden",
+            )
             rec["selected"] = selected
             if selected and rec not in st.session_state.selected_recommendations:
                 st.session_state.selected_recommendations.append(rec)

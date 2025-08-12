@@ -7,6 +7,9 @@ from backend.common.responses.exceptions.base_exceptions import BaseExceptionRes
 from backend.modules.base_trading_client import BaseTradingClient
 
 
+LOGGER_PREFIX = "[DNSE_API]"
+
+
 class OrderSide(Enum):
     BUY = "NB"
     SELL = "NS"
@@ -42,10 +45,10 @@ class OrdersClient(BaseTradingClient):
         
         try:
             result = await self.make_request("POST", url, json_data=data, include_trading_token=True)
-            self.log_success(f"Place order successfully: {side} {order_type} {quantity} {symbol}", result)
+            self.log_success(f"{LOGGER_PREFIX} Place order successfully: {side} {order_type} {quantity} {symbol}", result)
             return result
         except Exception as e:
-            self.log_error(f"Failed to place order: {side} {order_type} {quantity} {symbol}", e)
+            self.log_error(f"{LOGGER_PREFIX} Failed to place order: {side} {order_type} {quantity} {symbol}", e)
             raise BaseExceptionResponse(
                 http_code=502,
                 status_code=502,
@@ -59,10 +62,10 @@ class OrdersClient(BaseTradingClient):
         
         try:
             result = await self.make_request("GET", url, params=params)
-            self.log_success("Get order book successfully", result)
+            self.log_success(f"{LOGGER_PREFIX} Get order book successfully", result)
             return result
         except Exception as e:
-            self.log_error("Failed to get order book", e)
+            self.log_error(f"{LOGGER_PREFIX} Failed to get order book", e)
             raise BaseExceptionResponse(
                 http_code=502,
                 status_code=502,
@@ -76,7 +79,7 @@ class OrdersClient(BaseTradingClient):
         
         try:
             result = await self.make_request("GET", url, params=params)
-            self.log_success("Get order detail successfully", result)
+            self.log_success(f"{LOGGER_PREFIX} Get order detail successfully", result)
             return result
         except Exception as e:
             self.log_error("Failed to get order detail", e)
@@ -93,10 +96,10 @@ class OrdersClient(BaseTradingClient):
         
         try:
             result = await self.make_request("DELETE", url, params=params, include_trading_token=True)
-            self.log_success("Cancel order successfully", result)
+            self.log_success(f"{LOGGER_PREFIX} Cancel order successfully", result)
             return result
         except Exception as e:
-            self.log_error("Failed to cancel order", e)
+            self.log_error(f"{LOGGER_PREFIX} Failed to cancel order", e)
             raise BaseExceptionResponse(
                 http_code=502,
                 status_code=502,
@@ -110,10 +113,10 @@ class OrdersClient(BaseTradingClient):
         
         try:
             result = await self.make_request("GET", url, params=params)
-            self.log_success("Get held deals successfully", result)
+            self.log_success(f"{LOGGER_PREFIX} Get held deals successfully", result)
             return result
         except Exception as e:
-            self.log_error("Failed to get held deals", e)
+            self.log_error(f"{LOGGER_PREFIX} Failed to get held deals", e)
             raise BaseExceptionResponse(
                 http_code=502,
                 status_code=502,

@@ -67,10 +67,12 @@ def test():
 
 
 async def test_pnl_df():
+    import json
     from backend.modules.portfolio.services import PortfoliosService
 
-    portfolio_id = "CUSTOM-3-PhuOcCho-50fbf756"
+    portfolio_id = "SYSTEM-2025-08"
     pnl_data = await PortfoliosService.get_portfolio_pnl(portfolio_id=portfolio_id)
+    print(json.dumps(pnl_data, indent=4, ensure_ascii=False))
 
 
 

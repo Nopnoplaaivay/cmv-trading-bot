@@ -5,9 +5,11 @@ from backend.modules.dnse.trading_api import AuthClient, OrdersClient, UsersClie
 
 
 class TradingSession:
-    def __init__(self, config: Optional[TradingAPIConfig] = None, account: Optional[str] = None):
+    def __init__(
+        self, config: Optional[TradingAPIConfig] = None, account: Optional[str] = None
+    ):
         self.config = config or TradingAPIConfig()
-        self.auth_client: Optional[AuthClient] = None
+        self.auth_client: Optional[DNSE_API] = None
         self._jwt_token: Optional[str] = None
         self._trading_token: Optional[str] = None
         self.account = account
@@ -84,7 +86,7 @@ class TradingSession:
         client = UsersClient(
             config=self.config,
             jwt_token=self.jwt_token,
-            trading_token=self.trading_token,  
+            trading_token=self.trading_token,
         )
         try:
             yield client

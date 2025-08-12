@@ -18,6 +18,7 @@ from backend.utils.data_utils import DataUtils
 from backend.utils.logger import LOGGER
 
 
+LOGGER_PREFIX = "[StocksUniverseService]"
 UNIVERSE_SIZE = 20
 
 
@@ -131,7 +132,7 @@ class StocksUniverseService(BaseMonthlyService):
             )["netIncomeQoQ"].ffill()
 
         end_time = time.time()
-        LOGGER.info(f"--- DATA FETCH TIME: {end_time - start_time:.2f} seconds ---")
+        LOGGER.info(f"{LOGGER_PREFIX} DATA FETCH TIME: {end_time - start_time:.2f}s")
 
         df_stock = pd.merge(df_stock_1, df_stock_2, on=["date", "ticker"], how="left")
         df_stock = pd.merge(df_stock, df_stock_0, on=["ticker"], how="left")
@@ -260,7 +261,7 @@ class StocksUniverseService(BaseMonthlyService):
         )
 
         end_time = time.time()
-        LOGGER.info(f"--- GROUP RANKING TIME: {end_time - start_time:.2f} seconds ---")
+        LOGGER.info(f"{LOGGER_PREFIX} GROUP RANKING TIME: {end_time - start_time:.2f}s")
 
         """
         FILTER 2: Lọc theo tiêu chí Chất lượng.
@@ -310,8 +311,7 @@ class StocksUniverseService(BaseMonthlyService):
             ]
         ]
 
-        LOGGER.info(f"--- DONE FILTERING UNIVERSE TOP {UNIVERSE_SIZE} ---\n")
-
+        LOGGER.info(f"{LOGGER_PREFIX} DONE UPDATING UNIVERSE TOP {UNIVERSE_SIZE}\n")
         return universe_df
 
     @staticmethod

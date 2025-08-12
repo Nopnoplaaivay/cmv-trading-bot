@@ -69,8 +69,8 @@ class BaseDailyService:
                 text_clauses={"updatedAt": TextSQL(SQLServerConsts.GMT_7_NOW_VARCHAR)},
             )
             session.commit()
-
         return True
+
 
     @classmethod
     @abstractmethod

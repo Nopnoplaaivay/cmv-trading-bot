@@ -129,8 +129,8 @@ GO
 
 
 CREATE TYPE [BotPortfolio].[portfolioMetadata] AS TABLE (
-    [portfolioId] NVARCHAR(50),
-    [userId] INT NOT NULL,
+    [portfolioId] NVARCHAR(50) NOT NULL,
+    [userId] INT,
     [portfolioName] NVARCHAR(100) NOT NULL,
     [portfolioType] VARCHAR(50),
     [portfolioDesc] NVARCHAR(500),

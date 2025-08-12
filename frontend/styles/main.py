@@ -3,7 +3,7 @@ MAIN_CSS = """
 
    /* Original styles */
    .main-header {
-       background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+       background: linear-gradient(135deg, #006064 0%, #00bcd4 100%);
        padding: 1.5rem;
        border-radius: 15px;
        color: white;
@@ -13,13 +13,14 @@ MAIN_CSS = """
    }
    
    .metric-card {
-       background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+       background: linear-gradient(135deg, #1e1e1e 0%, #2d2d30 100%);
        padding: 1.5rem;
        border-radius: 12px;
        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-       border-left: 5px solid #2a5298;
+       border-left: 5px solid #00bcd4;
        margin-bottom: 1rem;
        transition: transform 0.2s;
+       color: #fafafa;
    }
    
    .metric-card:hover {
@@ -30,7 +31,7 @@ MAIN_CSS = """
    .stButton > button {
        border-radius: 8px;
        border: none;
-       background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+       background: linear-gradient(135deg, #00bcd4 0%, #006064 100%);
        color: white;
        padding: 0.5rem 1rem;
        transition: all 0.2s;
@@ -39,7 +40,7 @@ MAIN_CSS = """
    
    .stButton > button:hover {
        transform: translateY(-2px);
-       box-shadow: 0 4px 8px rgba(42,82,152,0.3);
+       box-shadow: 0 4px 8px rgba(0,188,212,0.3);
    }
    
    /* Tab Styling */
@@ -49,30 +50,32 @@ MAIN_CSS = """
    
    .stTabs [data-baseweb="tab"] {
        border-radius: 8px 8px 0 0;
-       background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-       border: 1px solid #dee2e6;
-       color: #495057;
+       background: linear-gradient(135deg, #2d2d30 0%, #1e1e1e 100%);
+       border: 1px solid #444;
+       color: #fafafa;
        font-weight: 500;
        padding: 8px 16px !important;  /* Thêm padding để tạo khoảng cách */
        min-width: auto;
    }
    
    .stTabs [aria-selected="true"] {
-       background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+       background: linear-gradient(135deg, #00bcd4 0%, #006064 100%);
        color: white;
-       border-color: #2a5298;
+       border-color: #00bcd4;
    }
    
    /* Form Styling */
    .stTextInput > div > div > input {
        border-radius: 8px;
-       border: 2px solid #e9ecef;
+       border: 2px solid #444;
+       background-color: #2d2d30;
+       color: #fafafa;
        transition: border-color 0.2s;
    }
    
    .stTextInput > div > div > input:focus {
-       border-color: #2a5298;
-       box-shadow: 0 0 0 0.2rem rgba(42,82,152,0.25);
+       border-color: #00bcd4;
+       box-shadow: 0 0 0 0.2rem rgba(0,188,212,0.25);
    }
 
     div[data-testid="InputInstructions"] {
@@ -81,17 +84,21 @@ MAIN_CSS = """
     
    .stSelectbox > div > div > div {
        border-radius: 8px;
-       border: 2px solid #e9ecef;
+       border: 2px solid #444;
+       background-color: #2d2d30;
+       color: #fafafa;
    }
    
    .stTextArea > div > div > textarea {
        border-radius: 8px;
-       border: 2px solid #e9ecef;
+       border: 2px solid #444;
+       background-color: #2d2d30;
+       color: #fafafa;
    }
 
    /* Sidebar Enhancement */
    .sidebar .sidebar-content {
-       background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+       background: linear-gradient(135deg, #2d2d30 0%, #1e1e1e 100%);
    }
     .sidebar-section {
         margin-bottom: 1rem;
@@ -102,43 +109,44 @@ MAIN_CSS = """
     }
     
     .sidebar .stExpander {
-        border: 1px solid #e0e0e0;
+        border: 1px solid #00bcd4;
         border-radius: 8px;
         margin-bottom: 0.5rem;
+        background-color: #2d2d30;
     }
    
    /* Alert Boxes */
    .alert-success {
-       background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-       border: 1px solid #c3e6cb;
-       color: #155724;
+       background: linear-gradient(135deg, #1b4332 0%, #2d5a4a 100%);
+       border: 1px solid #40916c;
+       color: #52b788;
        padding: 1rem;
        border-radius: 8px;
        margin: 1rem 0;
    }
    
    .alert-warning {
-       background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-       border: 1px solid #ffeaa7;
-       color: #856404;
+       background: linear-gradient(135deg, #663300 0%, #995500 100%);
+       border: 1px solid #cc7700;
+       color: #ff9900;
        padding: 1rem;
        border-radius: 8px;
        margin: 1rem 0;
    }
    
    .alert-error {
-       background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-       border: 1px solid #f5c6cb;
-       color: #721c24;
+       background: linear-gradient(135deg, #5c1e24 0%, #8b1c23 100%);
+       border: 1px solid #c13030;
+       color: #ff5252;
        padding: 1rem;
        border-radius: 8px;
        margin: 1rem 0;
    }
    
    .alert-info {
-       background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
-       border: 1px solid #bee5eb;
-       color: #0c5460;
+       background: linear-gradient(135deg, #004d5c 0%, #006064 100%);
+       border: 1px solid #00bcd4;
+       color: #26c6da;
        padding: 1rem;
        border-radius: 8px;
        margin: 1rem 0;
@@ -153,8 +161,8 @@ MAIN_CSS = """
    }
    
    .spinner {
-       border: 4px solid #f3f3f3;
-       border-top: 4px solid #2a5298;
+       border: 4px solid #444;
+       border-top: 4px solid #00bcd4;
        border-radius: 50%;
        width: 40px;
        height: 40px;
@@ -168,38 +176,40 @@ MAIN_CSS = """
 
    /* Portfolio Cards */
    .portfolio-card {
-       background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-       border: 1px solid #e9ecef;
+       background: linear-gradient(135deg, #2d2d30 0%, #1e1e1e 100%);
+       border: 1px solid #00bcd4;
        border-radius: 12px;
        padding: 1.5rem;
        margin: 1rem 0;
-       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+       box-shadow: 0 4px 6px rgba(0,0,0,0.3);
        transition: all 0.3s ease;
+       color: #fafafa;
    }
    
    .portfolio-card:hover {
        transform: translateY(-5px);
-       box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+       box-shadow: 0 8px 15px rgba(0,188,212,0.2);
    }
    
    .portfolio-card.system {
-       border-left: 5px solid #2a5298;
-       background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+       border-left: 5px solid #00bcd4;
+       background: linear-gradient(135deg, #1a4449 0%, #1e3a3f 100%);
    }
    
    .portfolio-card.custom {
        border-left: 5px solid #4caf50;
-       background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
+       background: linear-gradient(135deg, #1b2f1e 0%, #1f3023 100%);
    }
    
    /* Portfolio Stats */
    .portfolio-stats {
        display: flex;
        justify-content: space-around;
-       background: rgba(255,255,255,0.8);
+       background: rgba(45,45,48,0.8);
        border-radius: 8px;
        padding: 1rem;
        margin: 1rem 0;
+       border: 1px solid #00bcd4;
    }
    
    .stat-item {
@@ -210,19 +220,19 @@ MAIN_CSS = """
    .stat-value {
        font-size: 1.5rem;
        font-weight: bold;
-       color: #2a5298;
+       color: #00bcd4;
    }
    
    .stat-label {
        font-size: 0.9rem;
-       color: #666;
+       color: #bdbdbd;
        margin-top: 0.25rem;
    }
    
    /* Symbol Tags */
    .symbol-tag {
        display: inline-block;
-       background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+       background: linear-gradient(135deg, #00bcd4 0%, #006064 100%);
        color: white;
        padding: 0.25rem 0.75rem;
        border-radius: 20px;
@@ -234,7 +244,7 @@ MAIN_CSS = """
    
    .symbol-tag:hover {
        transform: scale(1.05);
-       box-shadow: 0 2px 8px rgba(42,82,152,0.3);
+       box-shadow: 0 2px 8px rgba(0,188,212,0.3);
    }
    
    .symbol-tag.removable {
@@ -249,17 +259,18 @@ MAIN_CSS = """
    
    /* Portfolio Creation Form */
    .portfolio-form {
-       background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
-       border: 1px solid #e0e0e0;
+       background: linear-gradient(135deg, #2d2d30 0%, #1e1e1e 100%);
+       border: 1px solid #00bcd4;
        border-radius: 12px;
        padding: 2rem;
        margin: 1rem 0;
+       color: #fafafa;
    }
    
    .form-section {
        margin-bottom: 1.5rem;
        padding-bottom: 1rem;
-       border-bottom: 1px solid #e9ecef;
+       border-bottom: 1px solid #444;
    }
    
    .form-section:last-child {
@@ -269,29 +280,31 @@ MAIN_CSS = """
    
    /* Symbol Search */
    .symbol-search-results {
-       background: #f8f9fa;
-       border: 1px solid #dee2e6;
+       background: #2d2d30;
+       border: 1px solid #00bcd4;
        border-radius: 8px;
        padding: 1rem;
        margin: 0.5rem 0;
        max-height: 200px;
        overflow-y: auto;
+       color: #fafafa;
    }
    
    .symbol-search-item {
-       background: white;
-       border: 1px solid #e9ecef;
+       background: #1e1e1e;
+       border: 1px solid #444;
        border-radius: 6px;
        padding: 0.5rem 1rem;
        margin: 0.25rem;
        display: inline-block;
        cursor: pointer;
        transition: all 0.2s ease;
+       color: #fafafa;
    }
    
    .symbol-search-item:hover {
-       background: #e3f2fd;
-       border-color: #2a5298;
+       background: #006064;
+       border-color: #00bcd4;
        transform: translateY(-1px);
    }
    

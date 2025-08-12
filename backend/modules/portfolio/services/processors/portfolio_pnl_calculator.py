@@ -6,7 +6,7 @@ from typing import List, Dict, Optional
 from backend.common.consts import SQLServerConsts
 
 
-class PortfolioCalculator:
+class PortfolioPnLCalculator:
     @staticmethod
     def process_portfolio_pnl(portfolio_weights_df: pd.DataFrame) -> pd.DataFrame:
         BOOK_SIZE = 1e9  # 1 tỷ VND
@@ -37,38 +37,33 @@ class PortfolioCalculator:
 
         for i, date in enumerate(dates):
             if i == 0 or i == 1:
-                # First day - just use base value
                 portfolio_values.append(BOOK_SIZE)
             else:
-                # Get previous weights and current prices
                 prev_date = dates[i - 2]
                 prev_weights = weights_pivot.loc[prev_date].values
                 prev_prices = prices_pivot.loc[prev_date].values
                 curr_prices = prices_pivot.loc[date].values
 
-                # Calculate price returns, handle NaN/inf
                 price_returns = (curr_prices - prev_prices) / prev_prices
                 price_returns = np.nan_to_num(
                     price_returns, nan=0.0, posinf=0.0, neginf=0.0
                 )
 
-                # Calculate portfolio return using previous weights
                 portfolio_return = np.sum(prev_weights * price_returns)
 
-                # Update portfolio value
                 current_portfolio_value *= 1 + portfolio_return
                 portfolio_values.append(current_portfolio_value)
 
-        # Create result DataFrame
         result_df = pd.DataFrame({"date": dates, "portfolio_value": portfolio_values})
 
-        # Calculate PnL percentage
+        # Calculate PnL percentage and absolute PnL
         result_df["pnl_pct"] = (result_df["portfolio_value"] / BOOK_SIZE - 1) * 100
+        result_df["pnl"] = result_df["portfolio_value"] - BOOK_SIZE
 
         # Format date
         result_df["date"] = result_df["date"].dt.strftime(SQLServerConsts.DATE_FORMAT)
 
-        return result_df[["date", "pnl_pct"]]
+        return result_df[["date", "pnl_pct", "pnl"]]
 
     @staticmethod
     def process_index_pnl(df_index: pd.DataFrame) -> pd.DataFrame:
@@ -115,10 +110,11 @@ class PortfolioCalculator:
             {"date": index_data["date"], "index_value": index_values}
         )
 
-        # Calculate PnL percentage
+        # Calculate PnL percentage and absolute PnL
         result_df["pnl_pct"] = (result_df["index_value"] / BOOK_SIZE - 1) * 100
+        result_df["pnl"] = result_df["index_value"] - BOOK_SIZE
 
         # Format date
         result_df["date"] = result_df["date"].dt.strftime(SQLServerConsts.DATE_FORMAT)
 
-        return result_df[["date", "pnl_pct"]]
+        return result_df[["date", "pnl_pct", "pnl"]]

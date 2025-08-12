@@ -11,6 +11,9 @@ from backend.utils.logger import LOGGER
 from backend.utils.time_utils import TimeUtils
 
 
+LOGGER_PREFIX = "[Telegram]"
+
+
 class MessageType(Enum):
     INFO = "ℹ️"
     SUCCESS = "✅"
@@ -51,7 +54,7 @@ class TelegramNotifier:
         import os
 
         if os.getenv("DOCKER_ENV", "false").lower() == "true":
-            LOGGER.info("Running in Docker environment - adjusting SSL settings")
+            LOGGER.info(f"{LOGGER_PREFIX} Running in Docker environment - adjusting SSL settings")
             self.ssl_context.check_hostname = False
             self.ssl_context.verify_mode = ssl.CERT_NONE
 
@@ -119,41 +122,41 @@ class TelegramNotifier:
                     async with session.post(url, json=payload) as response:
                         if response.status == 200:
                             LOGGER.info(
-                                f"Telegram message sent successfully (attempt {attempt + 1})"
+                                f"{LOGGER_PREFIX} Telegram message sent successfully (attempt {attempt + 1})"
                             )
                             return True
                         else:
                             error_text = await response.text()
                             LOGGER.warning(
-                                f"Telegram API error: {response.status} - {error_text}"
+                                f"{LOGGER_PREFIX} Telegram API error: {response.status} - {error_text}"
                             )
 
             except asyncio.TimeoutError:
                 LOGGER.error(
-                    f"Telegram API timeout (attempt {attempt + 1}) - Consider checking network connectivity in Docker"
+                    f"{LOGGER_PREFIX} Telegram API timeout (attempt {attempt + 1}) - Consider checking network connectivity in Docker"
                 )
             except aiohttp.ClientConnectorError as e:
-                LOGGER.error(f"Telegram connection error (attempt {attempt + 1}): {e}")
+                LOGGER.error(f"{LOGGER_PREFIX} Telegram connection error (attempt {attempt + 1}): {e}")
                 # Log additional info for Docker debugging
                 if os.getenv("DOCKER_ENV", "false").lower() == "true":
                     LOGGER.error(
-                        "Docker environment detected. This might be a DNS/network issue. Check:"
+                        f"{LOGGER_PREFIX} Docker environment detected. This might be a DNS/network issue. Check:"
                     )
-                    LOGGER.error("1. Container has internet access")
-                    LOGGER.error("2. DNS resolution is working")
-                    LOGGER.error("3. Firewall rules allow outbound HTTPS")
+                    LOGGER.error(f"{LOGGER_PREFIX} 1. Container has internet access")
+                    LOGGER.error(f"{LOGGER_PREFIX} 2. DNS resolution is working")
+                    LOGGER.error(f"{LOGGER_PREFIX} 3. Firewall rules allow outbound HTTPS")
             except ssl.SSLError as e:
-                LOGGER.error(f"Telegram SSL error (attempt {attempt + 1}): {e}")
+                LOGGER.error(f"{LOGGER_PREFIX} Telegram SSL error (attempt {attempt + 1}): {e}")
             except Exception as e:
                 LOGGER.error(
-                    f"Failed to send Telegram message (attempt {attempt + 1}): {e}"
+                    f"{LOGGER_PREFIX} Failed to send Telegram message (attempt {attempt + 1}): {e}"
                 )
 
             if attempt < self.max_retries - 1:
                 await asyncio.sleep(self.retry_delay * (attempt + 1))
 
         LOGGER.error(
-            f"Failed to send Telegram message after {self.max_retries} attempts"
+            f"{LOGGER_PREFIX} Failed to send Telegram message after {self.max_retries} attempts"
         )
         return False
 
@@ -270,7 +273,7 @@ class TelegramNotifier:
                         data = await response.json()
                         bot_info = data.get("result", {})
                         LOGGER.info(
-                            f"Telegram bot connected successfully: @{bot_info.get('username', 'unknown')}"
+                            f"{LOGGER_PREFIX} Telegram bot connected successfully: @{bot_info.get('username', 'unknown')}"
                         )
                         # await self.send_message(
                         #     f"🤖 Bot kết nối thành công!\n"
@@ -282,22 +285,22 @@ class TelegramNotifier:
                     else:
                         error_text = await response.text()
                         LOGGER.error(
-                            f"Telegram bot test failed: {response.status} - {error_text}"
+                            f"{LOGGER_PREFIX} Telegram bot test failed: {response.status} - {error_text}"
                         )
                         return False
         except asyncio.TimeoutError:
-            LOGGER.error("Telegram connection test error: Connection timeout")
+            LOGGER.error(f"{LOGGER_PREFIX} Telegram connection test error: Connection timeout")
             return False
         except aiohttp.ClientConnectorError as e:
             LOGGER.error(
-                f"Telegram connection test error: Cannot connect to host api.telegram.org:443 ssl:default [{e}]"
+                f"{LOGGER_PREFIX} Telegram connection test error: Cannot connect to host api.telegram.org:443 ssl:default [{e}]"
             )
             return False
         except ssl.SSLError as e:
-            LOGGER.error(f"Telegram connection test error: SSL error [{e}]")
+            LOGGER.error(f"{LOGGER_PREFIX} Telegram connection test error: SSL error [{e}]")
             return False
         except Exception as e:
-            LOGGER.error(f"Telegram connection test error: {e}")
+            LOGGER.error(f"{LOGGER_PREFIX} Telegram connection test error: {e}")
             return False
 
     # async def send_trade_alert(

@@ -15,6 +15,9 @@ from backend.utils.logger import LOGGER
 from backend.utils.time_utils import TimeUtils
 
 
+LOGGER_PREFIX = "[Pipeline]"
+
+
 class DailyDataPipelineService:
     """Pipeline to update all portfolio data daily at 7PM"""
 
@@ -25,7 +28,7 @@ class DailyDataPipelineService:
     async def run_pipeline(cls) -> Dict[str, Any]:
         """Run the complete daily data update pipeline"""
         start_time = datetime.now()
-        LOGGER.info("Starting daily data pipeline")
+        LOGGER.info(f"{LOGGER_PREFIX} Starting daily data pipeline")
 
         pipeline_results = {
             "start_time": start_time.isoformat(),
@@ -36,7 +39,7 @@ class DailyDataPipelineService:
 
         try:
             # Step 1: Update Balance Data
-            LOGGER.info("Step 1: Updating balance data...")
+            LOGGER.info(f"{LOGGER_PREFIX} Phase 1: Updating balance data...")
             balance_start = datetime.now()
             balance_result = await BalanceService.update_newest_balances_daily()
             balance_duration = (datetime.now() - balance_start).total_seconds()
@@ -52,7 +55,7 @@ class DailyDataPipelineService:
                 LOGGER.error("Balance update failed, continuing with pipeline...")
 
             # Step 2: Update Deals Data
-            LOGGER.info("Step 2: Updating deals data...")
+            LOGGER.info(f"{LOGGER_PREFIX} Phase 2: Updating deals data...")
             deals_start = datetime.now()
             deals_result = await DealsService.update_newest_deals_daily()
             deals_duration = (datetime.now() - deals_start).total_seconds()
@@ -65,10 +68,10 @@ class DailyDataPipelineService:
 
             if not deals_result.get("success", False):
                 pipeline_results["success"] = False
-                LOGGER.error("Deals update failed, continuing with pipeline...")
+                LOGGER.error(f"{LOGGER_PREFIX} Deals update failed, continuing with pipeline...")
 
             # Step 3: Update Universe Top Monthly
-            LOGGER.info("Step 3: Updating universe top monthly...")
+            LOGGER.info(f"{LOGGER_PREFIX} Phase 3: Updating universe top monthly...")
             universe_start = datetime.now()
             universe_result = (
                 await StocksUniverseService.update_newest_data_all_monthly()
@@ -83,10 +86,10 @@ class DailyDataPipelineService:
 
             if not universe_result:
                 pipeline_results["success"] = False
-                LOGGER.error("Universe update failed, continuing with pipeline...")
+                LOGGER.error(f"{LOGGER_PREFIX} Universe update failed, continuing with pipeline...")
 
             # Step 4: Update Optimized Weights
-            LOGGER.info("Step 4: Updating optimized weights...")
+            LOGGER.info(f"{LOGGER_PREFIX} Phase 4: Updating qOptimized weights...")
             weights_start = datetime.now()
             weights_result = await PortfoliosService.update_newest_data_all_daily()
             weights_duration = (datetime.now() - weights_start).total_seconds()
@@ -99,10 +102,10 @@ class DailyDataPipelineService:
 
             if not weights_result:
                 pipeline_results["success"] = False
-                LOGGER.error("Weights update failed, continuing with pipeline...")
+                LOGGER.error(f"{LOGGER_PREFIX} Weights update failed, continuing with pipeline...")
 
             # Step 5: Send Portfolio Notifications
-            LOGGER.info("Step 5: Sending portfolio notifications...")
+            LOGGER.info(f"{LOGGER_PREFIX} Phase 5: Sending portfolio notifications...")
             notification_start = datetime.now()
             notification_result = (
                 await PortfolioNotificationService.send_daily_system_portfolio()
@@ -119,7 +122,7 @@ class DailyDataPipelineService:
 
             if not notification_result:
                 pipeline_results["success"] = False
-                LOGGER.error("Notification sending failed")
+                LOGGER.error(f"{LOGGER_PREFIX} Notification sending failed")
 
             # Calculate total duration
             end_time = datetime.now()
@@ -130,12 +133,12 @@ class DailyDataPipelineService:
             await cls.send_pipeline_summary(pipeline_results)
 
             LOGGER.info(
-                f"Daily pipeline completed in {pipeline_results['total_duration']:.2f} seconds"
+                f"{LOGGER_PREFIX} Daily pipeline completed in {pipeline_results['total_duration']:.2f} seconds"
             )
             return pipeline_results
 
         except Exception as e:
-            LOGGER.error(f"Fatal error in daily pipeline: {e}")
+            LOGGER.error(f"{LOGGER_PREFIX} Fatal error in daily pipeline: {e}")
             await notify_error(
                 "DAILY PIPELINE FATAL ERROR",
                 f"Daily data pipeline failed with fatal error: {str(e)}",
@@ -238,9 +241,9 @@ class DailyDataPipelineService:
     @classmethod
     async def schedule_daily_run(cls) -> None:
         """Schedule the pipeline to run daily at 7PM"""
-        LOGGER.info("Starting daily pipeline scheduler...")
+        LOGGER.info(f"{LOGGER_PREFIX} Starting daily pipeline scheduler...")
 
-        LOGGER.info(f"PRODUCTION MODE: Pipeline will run daily at {cls.PIPELINE_TIME}")
+        LOGGER.info(f"{LOGGER_PREFIX} PRODUCTION MODE: Pipeline will run daily at {cls.PIPELINE_TIME}")
 
         while True:
             try:
@@ -262,9 +265,9 @@ class DailyDataPipelineService:
                 time_until_run = (target_time - current_time).total_seconds()
 
                 LOGGER.info(
-                    f"Next pipeline run scheduled for: {target_time.isoformat()}"
+                    f"{LOGGER_PREFIX} Next pipeline run scheduled for: {target_time.isoformat()}"
                 )
-                LOGGER.info(f"Waiting {time_until_run:.0f} seconds...")
+                LOGGER.info(f"{LOGGER_PREFIX} Waiting {time_until_run:.0f} seconds...")
 
                 # Break long waits into smaller chunks with health checks
                 if time_until_run > 3600:  # If waiting more than 1 hour
@@ -273,7 +276,7 @@ class DailyDataPipelineService:
                     await asyncio.sleep(time_until_run)
 
                 # Run the pipeline
-                LOGGER.info("Executing scheduled daily pipeline...")
+                LOGGER.info(f"{LOGGER_PREFIX} Executing scheduled daily pipeline...")
                 await cls.run_pipeline()
 
                 # Sleep for a minute to avoid running multiple times
@@ -295,7 +298,7 @@ class DailyDataPipelineService:
         elapsed = 0
 
         while elapsed < total_seconds:
-            LOGGER.info(f"Running health checks every {check_interval} seconds...")
+            LOGGER.info(f"{LOGGER_PREFIX} Running health checks every {check_interval} seconds...")
             remaining = total_seconds - elapsed
             sleep_time = min(check_interval, remaining)
 
@@ -304,9 +307,7 @@ class DailyDataPipelineService:
             # Health check every hour
             if elapsed % check_interval == 0 and remaining > 0:
                 hours_remaining = remaining / 3600
-                LOGGER.info(
-                    f"Pipeline scheduler health check: {hours_remaining:.1f} hours remaining"
-                )
+                LOGGER.info(f"{LOGGER_PREFIX} Pipeline scheduler health check: {hours_remaining:.1f} hours remaining")
 
                 if hours_remaining <= 2:  # Only notify when close to execution time
                     await notify_success(
@@ -319,5 +320,5 @@ class DailyDataPipelineService:
     @classmethod
     async def run_manual(cls) -> Dict[str, Any]:
         """Run the pipeline manually (for testing or emergency updates)"""
-        LOGGER.info("Running daily pipeline manually...")
+        LOGGER.info(f"{LOGGER_PREFIX} Running daily pipeline manually...")
         return await cls.run_pipeline()

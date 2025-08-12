@@ -7,12 +7,38 @@ from frontend.services.portfolio import PortfolioService
 from frontend.utils.helpers import format_currency, format_percentage
 
 
+def clear_portfolio_analysis_cache(portfolio_id: str):
+    """Clear all cached data for a specific portfolio in session state"""
+    keys_to_remove = []
+    for key in st.session_state.keys():
+        if portfolio_id in key and any(
+            prefix in key
+            for prefix in ["portfolio_data", "risk_metrics", "performance_data"]
+        ):
+            keys_to_remove.append(key)
+
+    for key in keys_to_remove:
+        del st.session_state[key]
+
+
+def clear_all_portfolio_service_cache():
+    """Clear Streamlit cache for PortfolioService methods"""
+    # Clear the @st.cache_data decorators
+    try:
+        PortfolioService.get_my_portfolios.clear()
+        PortfolioService.get_portfolio_pnl.clear()
+        PortfolioService.get_system_portfolios.clear()
+        PortfolioService.get_all_symbols.clear()
+    except AttributeError:
+        # Some cache methods might not exist
+        pass
+
+
 def portfolio_management_page():
     """Main portfolio management page"""
     st.subheader("📊 Portfolio Management")
 
-    # Create tabs
-    tab1, tab2, tab3 = st.tabs(["📋 My Portfolios", "➕ Create New", "⚙️ Settings"])
+    tab1, tab2 = st.tabs(["📋 My Portfolios", "➕ Create New"])
 
     with tab1:
         render_portfolio_list()
@@ -20,37 +46,31 @@ def portfolio_management_page():
     with tab2:
         render_create_portfolio_form()
 
-    # with tab3:
-    #     render_portfolio_settings()
-
 
 def render_portfolio_selector() -> Optional[str]:
     """Render portfolio selector in sidebar"""
-    portfolios = PortfolioService.get_my_portfolios().get("portfolios")
+    personal_portfolios = PortfolioService.get_my_portfolios().get("portfolios")
+    system_portfolios = PortfolioService.get_system_portfolios().get("portfolios")
+    portfolios = personal_portfolios + system_portfolios
 
-    if not portfolios:
-        st.sidebar.warning("No portfolios found. Create your first portfolio!")
-        return None
-
-    # Add system portfolio option
-    portfolio_options = ["System Portfolio (20)"] + [
+    portfolio_options = [
         f"{p['metadata'].get('portfolioName', 'Unknown')} ({len(p.get('records', []))})"
         for p in portfolios
-        if p["metadata"].get("portfolioType") == "Custom"
     ]
+
+    if not personal_portfolios:
+        st.sidebar.info(
+            "💡 You can analyze the System Portfolio or create your first custom portfolio!"
+        )
 
     selected_option = st.sidebar.selectbox(
         "📊 Select Portfolio", portfolio_options, key="portfolio_selector"
     )
 
-    if selected_option == "System Portfolio (20)":
-        return "SYSTEM"
-    else:
-        for portfolio in portfolios:
-            if portfolio["metadata"].get("portfolioType") == "Custom":
-                option_text = f"{portfolio['metadata'].get('portfolioName', 'Unknown')} ({len(portfolio.get('records', []))})"
-                if option_text == selected_option:
-                    return portfolio.get("portfolioId")
+    for portfolio in portfolios:
+        option_text = f"{portfolio['metadata'].get('portfolioName', 'Unknown')} ({len(portfolio.get('records', []))})"
+        if option_text == selected_option:
+            return portfolio.get("portfolioId")
 
     return None
 
@@ -75,7 +95,7 @@ def render_portfolio_list():
         )
 
     custom_portfolios = [
-        p for p in portfolios if p["metadata"].get("portfolioType") == "Custom"
+        p for p in portfolios if p["metadata"].get("portfolioType") == "CUSTOM"
     ]
 
     if not custom_portfolios:
@@ -104,6 +124,13 @@ def confirm_delete_dialog(portfolio: Dict):
 
             if result["success"]:
                 st.success("✅ Portfolio deleted successfully!")
+
+                # Clear analysis cache for deleted portfolio
+                clear_portfolio_analysis_cache(portfolio["portfolioId"])
+
+                # Clear service cache to refresh portfolio lists
+                clear_all_portfolio_service_cache()
+
                 time.sleep(1.5)
                 st.rerun()
             else:
@@ -259,6 +286,9 @@ def render_create_portfolio_form():
                     st.success(f"✅ Portfolio '{portfolio_name}' created successfully!")
                     st.balloons()
 
+                    # Clear service cache to refresh portfolio lists
+                    clear_all_portfolio_service_cache()
+
                     # Auto-refresh portfolio list
                     time.sleep(1)
                     st.rerun()
@@ -328,17 +358,29 @@ def render_edit_portfolio_form(portfolio: Dict):
             if len(updated_symbols) < 2:
                 st.error("Portfolio must contain at least 2 symbols")
             else:
-                result = PortfolioService.update_portfolio_symbols(
+                result = PortfolioService.update_portfolio(
                     portfolio["portfolioId"], updated_symbols
                 )
 
                 if result["success"]:
                     st.success("Portfolio updated successfully!")
+
+                    # Clear analysis cache for this portfolio
+                    clear_portfolio_analysis_cache(portfolio["portfolioId"])
+
+                    # Clear service cache to refresh portfolio lists
+                    clear_all_portfolio_service_cache()
+
                     st.session_state[f"editing_{portfolio['portfolioId']}"] = False
                     # Keep expander open after successful update
                     expander_key = f"expander_{portfolio['portfolioId']}"
                     if expander_key in st.session_state:
                         st.session_state[expander_key] = True
+
+                    # Show additional info about cache clearing
+                    st.info(
+                        "🔄 Portfolio cache cleared - analysis page will show updated data"
+                    )
                     st.rerun()
                 else:
                     st.error(f"Failed to update: {result['error']}")

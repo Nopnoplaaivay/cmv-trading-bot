@@ -21,6 +21,9 @@ from backend.utils.time_utils import TimeUtils
 from backend.utils.json_utils import JSONUtils
 
 
+LOGGER_PREFIX = "[PortfolioAnalysis]"
+
+
 # Main Portfolio Analysis Service
 class PortfolioAnalysisService:
     portfolio_data_provider = PortfolioDataProvider
@@ -35,7 +38,7 @@ class PortfolioAnalysisService:
         strategy_type: str = "market_neutral",
     ) -> Optional[Dict]:
         try:
-            LOGGER.info(f"Analyzing portfolio for account {broker_account_id}")
+            LOGGER.info(f"{LOGGER_PREFIX} Analyzing portfolio for account {broker_account_id}")
 
             # Get account details
             trade_account = await cls.account_data_provider.get_trading_account(
@@ -43,7 +46,7 @@ class PortfolioAnalysisService:
             )
             if not trade_account:
                 LOGGER.warning(
-                    f"No trading account found for broker_account_id: {broker_account_id}"
+                    f"{LOGGER_PREFIX} No trading account found for broker_account_id: {broker_account_id}"
                 )
                 return None
 
@@ -69,13 +72,13 @@ class PortfolioAnalysisService:
 
                     if not balance_dict:
                         LOGGER.warning(
-                            f"No balance data found for account {broker_account_id}"
+                            f"{LOGGER_PREFIX} No balance data found for account {broker_account_id}"
                         )
                         return None
 
                     if not deals_dict:
                         LOGGER.warning(
-                            f"No deals data found for account {broker_account_id}"
+                            f"{LOGGER_PREFIX} No deals data found for account {broker_account_id}"
                         )
                         return None
 
@@ -108,7 +111,7 @@ class PortfolioAnalysisService:
                     )
 
                     LOGGER.info(
-                        f"Sending daily portfolio notification for {next_trading_date_str}"
+                        f"{LOGGER_PREFIX} Sending daily portfolio notification for {next_trading_date_str}"
                     )
 
                     portfolio_data = (
@@ -120,7 +123,7 @@ class PortfolioAnalysisService:
 
                     if not portfolio_data:
                         LOGGER.warning(
-                            f"No portfolio weights found for {next_trading_date_str}"
+                            f"{LOGGER_PREFIX} No portfolio weights found for {next_trading_date_str}"
                         )
                         return None
 
@@ -169,7 +172,7 @@ class PortfolioAnalysisService:
 
         except Exception as e:
             LOGGER.error(
-                f"Error in portfolio analysis for account {broker_account_id}: {str(e)}"
+                f"{LOGGER_PREFIX} Error in portfolio analysis for account {broker_account_id}: {str(e)}"
             )
             raise BaseExceptionResponse(
                 http_code=500,

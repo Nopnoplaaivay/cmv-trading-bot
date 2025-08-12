@@ -1,8 +1,9 @@
 import datetime
 import warnings
 import pandas as pd
-from typing import List
+from typing import List, Dict
 from pydantic import ValidationError
+from dateutil.relativedelta import relativedelta
 
 from backend.common.consts import SQLServerConsts, MessageConsts
 from backend.common.responses.exceptions import BaseExceptionResponse
@@ -18,13 +19,19 @@ from backend.modules.portfolio.repositories import (
     PortfoliosRepo,
     PortfolioMetadataRepo,
     StocksUniverseRepo,
-    portfolio,
 )
 from backend.modules.portfolio.core import PortfolioOptimizer
 from backend.modules.portfolio.services.data_providers import PriceDataProvider
-from backend.modules.portfolio.services.processors import PortfolioCalculator
+from backend.modules.portfolio.services.processors import (
+    PortfolioPnLCalculator,
+    PortfolioRiskCalculator,
+)
 from backend.modules.portfolio.utils.portfolio_utils import PortfolioUtils
 from backend.modules.portfolio.infrastructure import TradingCalendarService
+from backend.utils.logger import LOGGER
+
+
+LOGGER_PREFIX = "[PortfoliosService]"
 
 
 class PortfoliosService(BaseDailyService):
@@ -32,14 +39,14 @@ class PortfoliosService(BaseDailyService):
     metadata_repo = PortfolioMetadataRepo
     trading_calendar = TradingCalendarService
     portfolio_optimizer = PortfolioOptimizer
-    portfolio_calculator = PortfolioCalculator
+    portfolio_pnl_calculator = PortfolioPnLCalculator
 
     @classmethod
     async def update_data(cls, from_date: str) -> pd.DataFrame:
         days_back = 21
 
         df_stock_pivoted = await PriceDataProvider(prefix="STOCK").get_market_data(
-            from_date=from_date, days_back=days_back
+            from_date=from_date
         )
         df_stock_pivoted = df_stock_pivoted.dropna(axis=1, how="all")
 
@@ -50,46 +57,71 @@ class PortfoliosService(BaseDailyService):
         portfolio_weights = []
         portfolio_id = PortfolioUtils.generate_general_portfolio_id(date=from_date)
 
-        for i in range(days_back - 1, T):
-            window = df_stock_pivoted.iloc[i - days_back + 1 : i + 1]
-            end_of_period = window.index[-1]
+        with cls.metadata_repo.session_scope() as metadata_session:
+            for i in range(days_back - 1, T):
+                window = df_stock_pivoted.iloc[i - days_back + 1 : i + 1]
+                end_of_period = window.index[-1]
 
-            # Check if need to update the assets for the current month
-            if (
-                pd.to_datetime(end_of_period).year != tmp_year
-                or pd.to_datetime(end_of_period).month != tmp_month
-                or not assets
-            ):
-                tmp_year = pd.to_datetime(end_of_period).year
-                tmp_month = pd.to_datetime(end_of_period).month
-                portfolio_id = PortfolioUtils.generate_general_portfolio_id(
-                    date=end_of_period
+                # Check if need to update the assets for the current month
+                if (
+                    pd.to_datetime(end_of_period).year != tmp_year
+                    or pd.to_datetime(end_of_period).month != tmp_month
+                    or not assets
+                ):
+                    tmp_year = pd.to_datetime(end_of_period).year
+                    tmp_month = pd.to_datetime(end_of_period).month
+                    portfolio_id = PortfolioUtils.generate_general_portfolio_id(
+                        date=end_of_period
+                    )
+
+                    records = await StocksUniverseRepo.get_asset_by_year_month(
+                        year=tmp_year, month=tmp_month
+                    )
+                    assets = [record[StocksUniverse.symbol.name] for record in records]
+
+                # Filter columns (tickers) that are in the current month's universe
+                available_assets = [
+                    asset for asset in assets if asset in window.columns
+                ]
+                df_portfolio = window[available_assets].copy()
+                x_CEMV, x_CEMV_neutralized, _, _ = cls.portfolio_optimizer.optimize(
+                    df_portfolio=df_portfolio
                 )
 
-                records = await StocksUniverseRepo.get_asset_by_year_month(
-                    year=tmp_year, month=tmp_month
+                for j in range(len(x_CEMV)):
+                    record = {
+                        Portfolios.date.name: end_of_period,
+                        Portfolios.symbol.name: df_portfolio.columns[j],
+                        Portfolios.portfolioId.name: portfolio_id,
+                        Portfolios.marketPrice.name: df_portfolio.iloc[-1, j],
+                        Portfolios.initialWeight.name: x_CEMV[j],
+                        Portfolios.neutralizedWeight.name: max(
+                            x_CEMV_neutralized[j], 0.0
+                        ),
+                        Portfolios.limitedWeight.name: float(0),
+                        Portfolios.neutralizedLimitedWeight.name: float(0),
+                    }
+                    portfolio_weights.append(record)
+
+                portfolio_year = pd.to_datetime(end_of_period).year
+                portfolio_month = pd.to_datetime(end_of_period).month
+                portfolio_name = f"SysPrtfUnv20S{portfolio_year}{portfolio_month}"
+                temp_table = f"#{cls.metadata_repo.query_builder.table}"
+                await cls.metadata_repo.upsert(
+                    temp_table=temp_table,
+                    records=[
+                        {
+                            PortfolioMetadata.portfolioId.name: portfolio_id,
+                            PortfolioMetadata.portfolioName.name: portfolio_name,
+                            PortfolioMetadata.portfolioDesc.name: "UniverseTop20Portfolio",
+                        }
+                    ],
+                    identity_columns=[PortfolioMetadata.portfolioId.name],
+                    text_clauses={
+                        "__updatedAt__": TextSQL(SQLServerConsts.GMT_7_NOW_VARCHAR)
+                    },
                 )
-                assets = [record[StocksUniverse.symbol.name] for record in records]
-
-            # Filter columns (tickers) that are in the current month's universe
-            available_assets = [asset for asset in assets if asset in window.columns]
-            df_portfolio = window[available_assets].copy()
-            x_CEMV, x_CEMV_neutralized, x_CEMV_limited, x_CEMV_neutralized_limit = (
-                cls.portfolio_optimizer.optimize(df_portfolio=df_portfolio)
-            )
-
-            for j in range(len(x_CEMV)):
-                record = {
-                    Portfolios.date.name: end_of_period,
-                    Portfolios.symbol.name: df_portfolio.columns[j],
-                    Portfolios.portfolioId.name: portfolio_id,
-                    Portfolios.marketPrice.name: df_portfolio.iloc[-1, j],
-                    Portfolios.initialWeight.name: x_CEMV[j],
-                    Portfolios.neutralizedWeight.name: max(x_CEMV_neutralized[j], 0.0),
-                    Portfolios.limitedWeight.name: float(0),
-                    Portfolios.neutralizedLimitedWeight.name: float(0),
-                }
-                portfolio_weights.append(record)
+            metadata_session.commit()
 
         portfolio_weights_df = pd.DataFrame(portfolio_weights)
         return portfolio_weights_df
@@ -176,7 +208,7 @@ class PortfoliosService(BaseDailyService):
                         PortfolioMetadata.portfolioId.name: portfolio_id,
                         PortfolioMetadata.userId.name: user_id,
                         PortfolioMetadata.portfolioName.name: portfolio_name,
-                        PortfolioMetadata.portfolioType.name: "Custom",
+                        PortfolioMetadata.portfolioType.name: "CUSTOM",
                         PortfolioMetadata.portfolioDesc.name: portfolio_desc,
                         PortfolioMetadata.algorithm.name: "CMV",
                     },
@@ -203,7 +235,7 @@ class PortfoliosService(BaseDailyService):
             )
 
     @classmethod
-    async def update_portfolio_symbols(
+    async def update_portfolio(
         cls, portfolio_id: str, symbols: List[str], user: JwtPayload
     ) -> None:
         try:
@@ -305,7 +337,7 @@ class PortfoliosService(BaseDailyService):
             )
 
     @classmethod
-    async def get_portfolio_by_id(
+    async def get_portfolios_by_id(
         cls, portfolio_id: str, user: JwtPayload
     ) -> pd.DataFrame:
         try:
@@ -359,6 +391,7 @@ class PortfoliosService(BaseDailyService):
                     user_id=user.userId
                 )
                 if not portfolios_metadata:
+                    LOGGER.info(f"{LOGGER_PREFIX} No portfolio metadata found for user {user.userId}")
                     return {"portfolios": []}
                 unique_portfolio_ids = set(
                     metadata[PortfolioMetadata.portfolioId.name]
@@ -395,22 +428,99 @@ class PortfoliosService(BaseDailyService):
             for portfolio_id in unique_portfolio_ids:
                 portfolio_metadata = next(
                     (
-                        meta
-                        for meta in portfolios_metadata
-                        if meta[Portfolios.portfolioId.name] == portfolio_id
+                        metadata
+                        for metadata in portfolios_metadata
+                        if metadata[Portfolios.portfolioId.name] == portfolio_id
                     ),
                     None,
                 )
-                if portfolio_metadata:
+                records = [
+                    port
+                    for port in portfolios_records
+                    if port[Portfolios.portfolioId.name] == portfolio_id
+                ]
+                if portfolio_metadata and len(records) > 0:
                     portfolios.append(
                         {
                             "portfolioId": portfolio_id,
                             "metadata": portfolio_metadata,
-                            "records": [
-                                port
-                                for port in portfolios_records
-                                if port[Portfolios.portfolioId.name] == portfolio_id
-                            ],
+                            "records": records,
+                        }
+                    )
+            return {"portfolios": portfolios}
+
+        except Exception as e:
+            raise BaseExceptionResponse(
+                http_code=500,
+                status_code=500,
+                message=MessageConsts.INTERNAL_SERVER_ERROR,
+                errors=str(e),
+            )
+
+    @classmethod
+    async def get_system_portfolios(cls) -> Dict:
+        try:
+            with cls.repo.session_scope() as session:
+                system_portfolios_metadata = await cls.metadata_repo.get_by_condition(
+                    conditions={PortfolioMetadata.portfolioType.name: "SYSTEM"}
+                )
+                if not system_portfolios_metadata:
+                    return {"portfolios": []}
+
+                unique_portfolio_ids = set(
+                    metadata[PortfolioMetadata.portfolioId.name]
+                    for metadata in system_portfolios_metadata
+                )
+
+                condition_str = "'" + "','".join(unique_portfolio_ids) + "'"
+                sql_query = f"""
+                    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+                    WITH UncommittedData AS (
+                        SELECT *
+                        FROM [BotPortfolio].[portfolios]
+                        WHERE [portfolioId] IN ({condition_str})
+                    )
+
+                    SELECT *
+                    FROM UncommittedData
+                """
+
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", UserWarning)
+                    conn = session.connection().connection
+                    df_portfolios = pd.read_sql_query(sql_query, conn)
+
+                session.commit()
+
+            # convert to list of portfolios
+            portfolios_records = df_portfolios.to_dict(orient="records")
+            if not portfolios_records:
+                return {"portfolios": []}
+
+            portfolios = []
+            for portfolio_id in unique_portfolio_ids:
+                portfolio_metadata = next(
+                    (
+                        meta
+                        for meta in system_portfolios_metadata
+                        if meta[PortfolioMetadata.portfolioId.name] == portfolio_id
+                    ),
+                    None,
+                )
+
+                latest_date = max(record[Portfolios.date.name] for record in portfolios_records)
+                records = [
+                    record
+                    for record in portfolios_records
+                    if (record[Portfolios.portfolioId.name] == portfolio_id and record[Portfolios.date.name] == latest_date)
+                ]
+                if portfolio_metadata and len(records) > 0:
+                    portfolios.append(
+                        {
+                            "portfolioId": portfolio_id,
+                            "metadata": portfolio_metadata,
+                            "records": records,
                         }
                     )
             return {"portfolios": portfolios}
@@ -511,7 +621,7 @@ class PortfoliosService(BaseDailyService):
     @classmethod
     async def get_portfolio_pnl(
         cls, portfolio_id: str, strategy: str = "long-only"
-    ) -> dict:
+    ) -> Dict:
         try:
             with cls.repo.session_scope() as session:
                 portfolio_metadata = await cls.metadata_repo.get_by_portfolio_id(
@@ -526,12 +636,10 @@ class PortfoliosService(BaseDailyService):
                     )
 
                 days_back = 21
-
                 last_trading_date, _ = (
                     cls.trading_calendar.get_last_next_trading_dates()
                 )
-                # Calculate from_date as last trading date minus 1 year minus days_back
-                from_date = last_trading_date - datetime.timedelta(days=365 + days_back)
+                from_date = last_trading_date - relativedelta(months=15)
                 from_date_str = from_date.strftime(SQLServerConsts.DATE_FORMAT)
 
                 portfolios = await cls.repo.get_by_condition(
@@ -545,9 +653,21 @@ class PortfoliosService(BaseDailyService):
                         errors=f"No portfolio found with id {portfolio_id}",
                     )
 
+                # Find the actual latest date from all records
+                latest_date = max(record[Portfolios.date.name] for record in portfolios)
+                # Filter to get only records with the latest date
+                portfolios = [
+                    record
+                    for record in portfolios
+                    if record[Portfolios.date.name] == latest_date
+                ]
+
+                session.commit()
+
                 symbols = list(
                     set([record[Portfolios.symbol.name] for record in portfolios])
                 )
+                print()
                 df_stock_pivoted = await PriceDataProvider(
                     prefix="STOCK"
                 ).get_market_data(from_date=from_date_str)
@@ -578,47 +698,44 @@ class PortfoliosService(BaseDailyService):
                         portfolio_weights_df.append(record)
 
                 portfolio_weights_df = pd.DataFrame(portfolio_weights_df)
-                portfolio_pnl_df = cls.portfolio_calculator.process_portfolio_pnl(
+                portfolio_pnl_df = cls.portfolio_pnl_calculator.process_portfolio_pnl(
                     portfolio_weights_df=portfolio_weights_df
                 )
-                index_pnl_df = cls.portfolio_calculator.process_index_pnl(
+                index_pnl_df = cls.portfolio_pnl_calculator.process_index_pnl(
                     df_index=df_index
                 )
 
-                # Check and synchronize dates between portfolio and index PnL using forward fill
+                # Check and synchronize dates between portfolio and index PnL
+                # Ensure both dataframes have exactly the same 252 trading days (latest dates)
                 portfolio_dates = set(portfolio_pnl_df["date"].tolist())
                 index_dates = set(index_pnl_df["date"].tolist())
 
-                print(f"Portfolio PnL dates count: {len(portfolio_dates)}")
-                print(f"Index PnL dates count: {len(index_dates)}")
-
+                # Get all available dates and sort them
                 all_dates = sorted(list(portfolio_dates.union(index_dates)))
-                missing_in_portfolio = index_dates - portfolio_dates
-                missing_in_index = portfolio_dates - index_dates
 
-                print(f"Total unique dates: {len(all_dates)}")
-                if missing_in_portfolio:
-                    print(
-                        f"Dates missing in portfolio: {len(missing_in_portfolio)} days"
-                    )
-                if missing_in_index:
-                    print(f"Dates missing in index: {len(missing_in_index)} days")
+                # Take only the latest 252 trading days
+                TRADING_DAYS = 254  # 2 days buffer to calculate T + 2 daily return
+                if len(all_dates) > TRADING_DAYS:
+                    latest_dates = all_dates[-TRADING_DAYS:]
+                else:
+                    latest_dates = all_dates
 
                 # Create complete date range and forward fill missing values
-                if all_dates:
+                if latest_dates:
                     # Convert date columns to datetime for proper sorting
                     portfolio_pnl_df["date"] = pd.to_datetime(portfolio_pnl_df["date"])
                     index_pnl_df["date"] = pd.to_datetime(index_pnl_df["date"])
 
-                    # Create complete date range DataFrame
+                    # Create complete date range DataFrame with only the latest 252 dates
                     complete_dates_df = pd.DataFrame(
-                        {"date": pd.to_datetime(all_dates)}
+                        {"date": pd.to_datetime(latest_dates)}
                     )
 
                     # Merge and forward fill portfolio data
                     portfolio_complete = complete_dates_df.merge(
                         portfolio_pnl_df, on="date", how="left"
                     )
+                    # Forward fill missing pnl_pct values
                     portfolio_complete["pnl_pct"] = portfolio_complete[
                         "pnl_pct"
                     ].ffill()
@@ -627,14 +744,24 @@ class PortfoliosService(BaseDailyService):
                         "pnl_pct"
                     ].fillna(0)
 
+                    # Forward fill missing pnl values if they exist
+                    if "pnl" in portfolio_complete.columns:
+                        portfolio_complete["pnl"] = portfolio_complete["pnl"].ffill()
+                        portfolio_complete["pnl"] = portfolio_complete["pnl"].fillna(0)
+
                     # Merge and forward fill index data
                     index_complete = complete_dates_df.merge(
                         index_pnl_df, on="date", how="left"
                     )
+                    # Forward fill missing pnl_pct values
                     index_complete["pnl_pct"] = index_complete["pnl_pct"].ffill()
                     # If first values are NaN, fill with 0
                     index_complete["pnl_pct"] = index_complete["pnl_pct"].fillna(0)
-                    index_complete["pnl_pct"] = index_complete["pnl_pct"].fillna(0)
+
+                    # Forward fill missing pnl values if they exist
+                    if "pnl" in index_complete.columns:
+                        index_complete["pnl"] = index_complete["pnl"].ffill()
+                        index_complete["pnl"] = index_complete["pnl"].fillna(0)
 
                     # Convert back to string format for response
                     portfolio_complete["date"] = portfolio_complete["date"].dt.strftime(
@@ -648,14 +775,20 @@ class PortfoliosService(BaseDailyService):
                     index_pnl_df = index_complete
 
                 else:
-                    print("WARNING: No dates found in either portfolio or index!")
-                    portfolio_pnl_df = pd.DataFrame(columns=["date", "pnl_pct"])
-                    index_pnl_df = pd.DataFrame(columns=["date", "pnl_pct"])
+                    # If no dates available, create empty dataframes with proper columns
+                    portfolio_pnl_df = pd.DataFrame(columns=["date", "pnl_pct", "pnl"])
+                    index_pnl_df = pd.DataFrame(columns=["date", "pnl_pct", "pnl"])
+                    latest_dates = []
+
+                portfolio_risk_metrics = PortfolioRiskCalculator(
+                    portfolio_pnl_df
+                ).calculate_all_metrics()
+                index_risk_metrics = PortfolioRiskCalculator(
+                    index_pnl_df
+                ).calculate_all_metrics()
 
                 # Format response for easy frontend chart plotting
                 pnl_data = {
-                    "portfolio": portfolio_pnl_df.to_dict("records"),
-                    "vnindex": index_pnl_df.to_dict("records"),
                     "metadata": {
                         "portfolio_id": portfolio_id,
                         "strategy": strategy,
@@ -665,11 +798,16 @@ class PortfoliosService(BaseDailyService):
                         ),
                         "total_portfolio_days": len(portfolio_pnl_df),
                         "total_index_days": len(index_pnl_df),
-                        "total_dates": len(all_dates) if all_dates else 0,
-                        "missing_in_portfolio": len(missing_in_portfolio),
-                        "missing_in_index": len(missing_in_index),
+                        "total_dates": len(latest_dates),
+                        "trading_days_limit": TRADING_DAYS,
                         "symbols": symbols,
                     },
+                    "risk_metrics": {
+                        "portfolio": portfolio_risk_metrics,
+                        "vnindex": index_risk_metrics,
+                    },
+                    "portfolio": portfolio_pnl_df[["date", "pnl_pct"]].to_dict("records"),
+                    "vnindex": index_pnl_df[["date", "pnl_pct"]].to_dict("records"),
                 }
 
                 return pnl_data

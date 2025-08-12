@@ -12,6 +12,9 @@ from backend.utils.logger import LOGGER
 from backend.utils.time_utils import TimeUtils
 
 
+LOGGER_PREFIX = "[Redis]"
+
+
 try:
     redis_conn = REDIS_CLIENT.get_conn()
     redis_binary_conn = redis.Redis(
@@ -28,8 +31,8 @@ try:
     redis_binary_conn.ping()
     REDIS_AVAILABLE = True
 except Exception as e:
-    LOGGER.error(f"Failed to connect to Redis: {e}")
-    LOGGER.info("Redis is not available, falling back to SQL Server")
+    LOGGER.error(f"{LOGGER_PREFIX} Failed to connect to Redis: {e}")
+    LOGGER.info(f"{LOGGER_PREFIX} Redis is not available, falling back to SQL Server")
     REDIS_AVAILABLE = False
 
 
@@ -49,10 +52,10 @@ class PriceDataProvider:
 
         cached_data = await self.get_from_cache(cache_key)
         if cached_data is not None:
-            LOGGER.info(f"📦 Cache HIT for price data: {cache_key}")
+            LOGGER.info(f"{LOGGER_PREFIX} Cache HIT for price data: {cache_key}")
             return cached_data
 
-        LOGGER.info(f"💾 Cache MISS for price data: {cache_key} - fetching from DB")
+        LOGGER.info(f"{LOGGER_PREFIX} Cache MISS for price data: {cache_key} - fetching from DB")
 
         df_pivoted = await self.fetch_price_data_from_database(from_date)
         await self.save_to_cache(cache_key, df_pivoted)
@@ -79,12 +82,12 @@ class PriceDataProvider:
 
                     if isinstance(df, pd.DataFrame) and not df.empty:
                         LOGGER.debug(
-                            f"✅ Successfully retrieved cached DataFrame: shape {df.shape}"
+                            f"{LOGGER_PREFIX} Successfully retrieved cached DataFrame: shape {df.shape}"
                         )
                         return df
                     else:
                         LOGGER.warning(
-                            f"⚠️ Invalid cached DataFrame for key: {cache_key}"
+                            f"{LOGGER_PREFIX} Invalid cached DataFrame for key: {cache_key}"
                         )
                         redis_binary_conn.delete(cache_key)
 
@@ -94,7 +97,7 @@ class PriceDataProvider:
                     ValueError,
                 ) as decode_error:
                     LOGGER.warning(
-                        f"⚠️ Corrupted cache data for key {cache_key}: {str(decode_error)}"
+                        f"{LOGGER_PREFIX} Corrupted cache data for key {cache_key}: {str(decode_error)}"
                     )
                     redis_binary_conn.delete(cache_key)
                     return None
@@ -102,10 +105,10 @@ class PriceDataProvider:
             return None
 
         except Exception as e:
-            LOGGER.error(f"❌ Error retrieving from cache {cache_key}: {str(e)}")
+            LOGGER.error(f"{LOGGER_PREFIX} Error retrieving from cache {cache_key}: {str(e)}")
             try:
                 redis_binary_conn.delete(cache_key)
-                LOGGER.info(f"🧹 Cleaned up corrupted cache entry: {cache_key}")
+                LOGGER.info(f"{LOGGER_PREFIX} Cleaned up corrupted cache entry: {cache_key}")
             except:
                 pass
             return None
@@ -114,7 +117,7 @@ class PriceDataProvider:
         """Save DataFrame to Redis cache"""
         try:
             if df.empty:
-                LOGGER.warning("⚠️ Attempted to cache empty DataFrame - skipping")
+                LOGGER.warning(f"{LOGGER_PREFIX} Attempted to cache empty DataFrame - skipping")
                 return False
 
             df_bytes = pickle.dumps(df, protocol=4)
@@ -122,7 +125,7 @@ class PriceDataProvider:
             size_mb = len(df_bytes) / (1024 * 1024)
             if size_mb > 100:  # 100MB limit
                 LOGGER.warning(
-                    f"⚠️ DataFrame too large to cache: {size_mb:.2f}MB - skipping"
+                    f"{LOGGER_PREFIX} DataFrame too large to cache: {size_mb:.2f}MB - skipping"
                 )
                 return False
 
@@ -130,15 +133,15 @@ class PriceDataProvider:
 
             if success:
                 LOGGER.info(
-                    f"💾 Cached DataFrame: key={cache_key}, shape={df.shape}, size={size_mb:.2f}MB, ttl={self.cache_ttl}s"
+                    f"{LOGGER_PREFIX} Cached DataFrame: key={cache_key}, shape={df.shape}, size={size_mb:.2f}MB, ttl={self.cache_ttl}s"
                 )
                 return True
             else:
-                LOGGER.warning(f"⚠️ Failed to set cache entry: {cache_key}")
+                LOGGER.warning(f"{LOGGER_PREFIX} Failed to set cache entry: {cache_key}")
                 return False
 
         except Exception as e:
-            LOGGER.error(f"❌ Error saving to cache {cache_key}: {str(e)}")
+            LOGGER.error(f"{LOGGER_PREFIX} Error saving to cache {cache_key}: {str(e)}")
             return False
 
     async def fetch_price_data_from_database(self, from_date: str) -> pd.DataFrame:
@@ -184,8 +187,6 @@ class PriceDataProvider:
                         ORDER BY [date], [icbCode];
                     """
 
-                LOGGER.debug(f"🔍 Executing price data query: from_date={from_date}")
-
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", UserWarning)
                     conn = mart_session.connection().connection
@@ -195,7 +196,7 @@ class PriceDataProvider:
 
                     if df.empty:
                         LOGGER.warning(
-                            f"⚠️ No price data found for criteria: from_date={from_date}"
+                            f"{LOGGER_PREFIX} No price data found for criteria: from_date={from_date}"
                         )
                         return pd.DataFrame()
 
@@ -208,10 +209,10 @@ class PriceDataProvider:
                         df_pivoted = df[["date", "closeIndex"]].copy()
 
                     LOGGER.info(
-                        f"✅ Fetched price data from DB: shape={df_pivoted.shape}, date_range={from_date} to {df_pivoted.index.max()}"
+                        f"{LOGGER_PREFIX} Fetched price data from DB: shape={df_pivoted.shape}, date_range={from_date} to {df_pivoted.index.max()}"
                     )
                     return df_pivoted
 
         except Exception as e:
-            LOGGER.error(f"❌ Error fetching price data from database: {str(e)}")
+            LOGGER.error(f"{LOGGER_PREFIX} Error fetching price data from database: {str(e)}")
             raise e

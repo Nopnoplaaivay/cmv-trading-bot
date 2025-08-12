@@ -60,6 +60,28 @@ class PortfolioService:
 
     @staticmethod
     @st.cache_data(ttl=60)
+    def get_system_portfolios() -> Optional[List[Dict]]:
+        try:
+            response = requests.get(
+                f"{API_BASE_URL}/portfolio-service/system",
+                headers=get_auth_headers(),
+                timeout=30,
+            )
+
+            if response.status_code == 200:
+                return response.json().get("data", [])
+            elif handle_auth_error(response):
+                return None
+            else:
+                st.error(f"Failed to get portfolios: {response.json().get('message')}")
+                return None
+
+        except requests.exceptions.RequestException as e:
+            st.error(f"Network error: {str(e)}")
+            return None
+
+    @staticmethod
+    @st.cache_data(ttl=60)
     def get_my_portfolio_by_id(portfolio_id: str) -> Optional[Dict]:
         try:
             response = requests.get(
@@ -133,7 +155,7 @@ class PortfolioService:
             return None
 
     @staticmethod
-    def update_portfolio_symbols(portfolio_id: str, symbols: List[str]) -> Dict:
+    def update_portfolio(portfolio_id: str, symbols: List[str]) -> Dict:
         """Update symbols in a custom portfolio"""
         try:
             response = requests.put(
