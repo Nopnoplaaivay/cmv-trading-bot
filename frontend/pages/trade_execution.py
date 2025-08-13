@@ -1,7 +1,3 @@
-"""
-Trade execution page for CMV Trading Bot frontend
-"""
-
 import streamlit as st
 from ..services.trading import place_order_via_dnse
 

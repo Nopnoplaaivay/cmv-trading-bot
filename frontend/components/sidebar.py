@@ -1,7 +1,7 @@
 import streamlit as st
 
-from frontend.components.portfolio_quick_stats import render_portfolio_quick_stats
-from frontend.components.portfolio_management import render_portfolio_selector
+from frontend.services.portfolio import PortfolioService
+from frontend.components.management import render_portfolio_selector
 
 
 def render_sidebar():
@@ -12,8 +12,8 @@ def render_sidebar():
         pages = [
             "Portfolio Analysis",
             "Portfolio Management",
-            "Trade Execution",
-            "Order History",
+            # "Trade Execution",
+            # "Order History",
             "Account Management",
         ]
 
@@ -111,3 +111,18 @@ def render_logout_button():
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
+
+
+def render_portfolio_quick_stats():
+    st.markdown("### 📊 Quick Stats")
+    
+    portfolios = PortfolioService.get_my_portfolios().get('portfolios')
+    
+    if portfolios:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("My Portfolios", len(portfolios))
+        with col2:
+            for portfolio in portfolios:
+                portfolio_metadata = portfolio.get('metadata', {})
+                st.text(f"Portfolio: {portfolio_metadata.get('portfolioName', 'Unnamed Portfolio')}")

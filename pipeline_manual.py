@@ -1,13 +1,10 @@
 import asyncio
-import sys
-from pathlib import Path
 
 from backend.modules.portfolio.services.portfolio_daily_pipeline_service import DailyDataPipelineService
 from backend.utils.logger import LOGGER
 
 
 async def main():
-    """Main entry point for the daily data pipeline service"""
     try:
         LOGGER.info("Starting Daily Data Pipeline Service...")
         LOGGER.info("Pipeline will run automatically at 7:00 PM Vietnam time daily")

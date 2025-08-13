@@ -1,7 +1,3 @@
-"""
-Order history page for CMV Trading Bot frontend
-"""
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime

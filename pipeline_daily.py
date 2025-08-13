@@ -1,19 +1,3 @@
-"""
-Daily Data Pipeline Service
-
-This service runs the daily data update pipeline automatically at 7PM every day.
-It can be run as a standalone background service.
-
-The pipeline will:
-1. Update balance data for all accounts
-2. Update deals data for all accounts
-3. Update universe top monthly data
-4. Update optimized weights
-5. Send portfolio notifications to all users
-
-The service will run continuously and execute the pipeline at 7PM Vietnam time each day.
-"""
-
 import asyncio
 import sys
 from pathlib import Path
