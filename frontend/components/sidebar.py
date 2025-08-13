@@ -48,11 +48,11 @@ def render_sidebar():
         # Strategy Selection
         strategy_type = st.selectbox(
             "📊 Trading Strategy",
-            ["market_neutral", "long_only"],
+            ["MarketNeutral", "LongOnly"],
             index=(
                 0
-                if st.session_state.get("strategy_type", "market_neutral")
-                == "market_neutral"
+                if st.session_state.get("strategy_type", "MarketNeutral")
+                == "MarketNeutral"
                 else 1
             ),
         )

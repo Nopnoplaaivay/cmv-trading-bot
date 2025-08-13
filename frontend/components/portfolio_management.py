@@ -404,7 +404,7 @@ def render_edit_portfolio_form(portfolio: Dict):
 #         st.checkbox("Send portfolio notifications", value=True)
 #         st.selectbox(
 #             "Default strategy",
-#             ["market_neutral", "long_only"],
+#             ["MarketNeutral", "long_only"],
 #             index=0
 #         )
 
@@ -469,7 +469,7 @@ def render_edit_portfolio_form(portfolio: Dict):
 #         # Get analysis for this portfolio
 #         analysis = PortfolioService.get_portfolio_analysis(
 #             portfolio['id'],
-#             st.session_state.get("strategy_type", "market_neutral")
+#             st.session_state.get("strategy_type", "MarketNeutral")
 #         )
 
 #         if analysis:
@@ -531,7 +531,7 @@ def render_edit_portfolio_form(portfolio: Dict):
 #         st.warning("Please select a portfolio to analyze")
 #         return
 
-#     strategy_type = st.session_state.get("strategy_type", "market_neutral")
+#     strategy_type = st.session_state.get("strategy_type", "MarketNeutral")
 
 #     # Get analysis
 #     with st.spinner("📊 Analyzing portfolio..."):

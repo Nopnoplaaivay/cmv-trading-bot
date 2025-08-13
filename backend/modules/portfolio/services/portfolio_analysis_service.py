@@ -32,15 +32,13 @@ class PortfolioAnalysisService:
     trading_calendar = TradingCalendarService
 
     @classmethod
-    async def analyze_system_portfolio(
+    async def analyze_portfolio(
         cls,
         broker_account_id: str,
-        strategy_type: str = "market_neutral",
+        portfolio_id: str,
+        strategy_type: str = "MarketNeutral",
     ) -> Optional[Dict]:
         try:
-            LOGGER.info(f"{LOGGER_PREFIX} Analyzing portfolio for account {broker_account_id}")
-
-            # Get account details
             trade_account = await cls.account_data_provider.get_trading_account(
                 broker_account_id
             )
@@ -98,33 +96,13 @@ class PortfolioAnalysisService:
                         float(stock_value.amount),
                     )
 
-                    # Get target portfolio weights
-                    last_trading_date, next_trading_date = (
-                        cls.trading_calendar.get_last_next_trading_dates()
-                    )
-
-                    last_trading_date_str = last_trading_date.strftime(
-                        SQLServerConsts.DATE_FORMAT
-                    )
-                    next_trading_date_str = next_trading_date.strftime(
-                        SQLServerConsts.DATE_FORMAT
-                    )
-
-                    LOGGER.info(
-                        f"{LOGGER_PREFIX} Sending daily portfolio notification for {next_trading_date_str}"
-                    )
-
                     portfolio_data = (
-                        await cls.portfolio_data_provider.get_system_portfolio(
-                            last_trading_date=last_trading_date_str,
-                            next_trading_date=next_trading_date_str,
+                        await cls.portfolio_data_provider.get_portfolio_weights_by_id(
+                            portfolio_id=portfolio_id
                         )
                     )
 
                     if not portfolio_data:
-                        LOGGER.warning(
-                            f"{LOGGER_PREFIX} No portfolio weights found for {next_trading_date_str}"
-                        )
                         return None
 
                     # Get target weights based on strategy: long only or market neutral
@@ -159,9 +137,7 @@ class PortfolioAnalysisService:
                         "target_weights": target_weights,
                         "recommendations": [rec.to_dict() for rec in recommendations],
                         "analysis_date": (
-                            next_trading_date.strftime(SQLServerConsts.DATE_FORMAT)
-                            if next_trading_date
-                            else TimeUtils.get_current_vn_time().strftime(
+                                TimeUtils.get_current_vn_time().strftime(
                                 SQLServerConsts.DATE_FORMAT
                             )
                         ),
@@ -180,4 +156,3 @@ class PortfolioAnalysisService:
                 message=MessageConsts.INTERNAL_SERVER_ERROR,
                 errors=str(e),
             )
-

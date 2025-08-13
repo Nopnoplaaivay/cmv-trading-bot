@@ -162,8 +162,8 @@ class TelegramNotifier:
 
     async def send_model_portfolio_update(self, portfolio_data: Dict):
         date = portfolio_data["date"]
-        long_only = portfolio_data["long_only"]
-        market_neutral = portfolio_data["market_neutral"]
+        long_only = portfolio_data["LongOnly"]
+        market_neutral = portfolio_data["MarketNeutral"]
 
         date_display = datetime.strptime(date, SQLServerConsts.DATE_FORMAT).strftime(
             "%d/%m/%Y"

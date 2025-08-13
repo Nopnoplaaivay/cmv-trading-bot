@@ -105,7 +105,7 @@ class PortfolioService:
     @staticmethod
     @st.cache_data(ttl=30)  # Cache for 30 seconds
     def get_system_portfolio_analysis(
-        broker_account_id: str, strategy_type: str = "market_neutral"
+        broker_account_id: str, strategy_type: str = "market-neutral"
     ) -> Optional[Dict]:
         try:
             response = requests.get(
@@ -131,7 +131,7 @@ class PortfolioService:
     @staticmethod
     @st.cache_data(ttl=30)
     def get_portfolio_analysis(
-        portfolio_id: str, strategy_type: str = "market_neutral"
+        portfolio_id: str, strategy_type: str = "MarketNeutral"
     ) -> Optional[Dict]:
         """Get analysis for specific portfolio"""
         try:

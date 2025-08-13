@@ -1,6 +1,6 @@
 from .routers import portfolio_router, accounts_router
 from .portfolio import (
-    get_system_analysis,
+    get_portfolio_analysis,
     create_custom_portfolio,
     send_portfolio_report_notification,
     get_portfolios_by_id,

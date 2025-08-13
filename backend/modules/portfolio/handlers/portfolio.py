@@ -12,7 +12,11 @@ from backend.modules.portfolio.services import (
     PortfolioNotificationService,
     PortfoliosService,
 )
-from backend.modules.portfolio.dtos import CreateCustomPortfolioDTO, UpdatePortfolioDTO
+from backend.modules.portfolio.dtos import (
+    CreateCustomPortfolioDTO,
+    UpdatePortfolioDTO,
+    AnalyzePortfolioDTO,
+)
 from backend.modules.auth.decorators import UserPayload
 from backend.modules.auth.guards import auth_guard
 from backend.modules.auth.types import JwtPayload
@@ -27,6 +31,7 @@ async def get_my_portfolios(user: JwtPayload = Depends(UserPayload)):
     )
 
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
+
 
 @portfolio_router.get("/system", dependencies=[Depends(auth_guard)])
 async def get_system_portfolios(user: JwtPayload = Depends(UserPayload)):
@@ -139,14 +144,16 @@ async def delete_portfolio(portfolio_id: str, user: JwtPayload = Depends(UserPay
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
 
 
-@portfolio_router.get(
+@portfolio_router.post(
     "/analysis/{broker_account_id}", dependencies=[Depends(auth_guard)]
 )
-async def get_system_analysis(
-    broker_account_id: str, user: JwtPayload = Depends(UserPayload)
+async def get_portfolio_analysis(
+    broker_account_id: str, payload: AnalyzePortfolioDTO, user: JwtPayload = Depends(UserPayload)
 ):
-    analysis_result = await PortfolioAnalysisService.analyze_system_portfolio(
-        broker_account_id=broker_account_id
+    analysis_result = await PortfolioAnalysisService.analyze_portfolio(
+        broker_account_id=broker_account_id,
+        portfolio_id=payload.portfolio_id,
+        strategy_type=payload.strategy_type
     )
     response = SuccessResponse(
         http_code=200,
@@ -164,7 +171,7 @@ async def send_portfolio_report_notification(
     broker_account_id: str,
     user: JwtPayload = Depends(UserPayload),
     strategy_type: str = Query(
-        default="market_neutral", description="Portfolio strategy type"
+        default="MarketNeutral", description="Portfolio strategy type"
     ),
     include_trade_plan: bool = Query(
         default=True, description="Include trade recommendations in report"

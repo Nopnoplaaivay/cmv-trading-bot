@@ -27,7 +27,7 @@ def portfolio_analysis_page():
 def render_portfolio_vs_account_comparison():
     """Render comparison between user's real account and selected portfolio"""
     st.subheader("⚖️ Portfolio vs Real Account Comparison")
-    
+
     # Check if user has broker account
     if not st.session_state.get("broker_account_id"):
         st.warning(
@@ -41,7 +41,7 @@ def render_portfolio_vs_account_comparison():
     # Portfolio selector for comparison
     st.markdown("#### 📊 Select Portfolio for Comparison")
     selected_portfolio_id = render_portfolio_selector_for_comparison()
-    
+
     if not selected_portfolio_id:
         st.info("Please select a portfolio to compare with your real account.")
         return
@@ -56,7 +56,7 @@ def render_portfolio_vs_account_comparison():
     )
 
     col1, col2 = st.columns(2)
-    
+
     with col1:
         # Load real account data
         st.markdown("### 💼 Your Real Account")
@@ -65,18 +65,20 @@ def render_portfolio_vs_account_comparison():
                 st.session_state.broker_account_id,
                 strategy,
             )
-            
+
         if account_data:
             display_account_summary(account_data)
         else:
             st.error("❌ Failed to load account data.")
-            
+
     with col2:
         # Load selected portfolio data
         st.markdown("### 📈 Selected Portfolio")
         with st.spinner("📊 Loading portfolio data..."):
-            portfolio_data = PortfolioService.get_portfolio_pnl(selected_portfolio_id, strategy)
-            
+            portfolio_data = PortfolioService.get_portfolio_pnl(
+                selected_portfolio_id, strategy
+            )
+
         if portfolio_data:
             display_portfolio_summary_comparison(portfolio_data, selected_portfolio_id)
         else:
@@ -117,7 +119,7 @@ def render_portfolio_selector_for_comparison():
         "📊 Select Portfolio for Comparison",
         options=list(portfolio_options.keys()),
         key="comparison_portfolio_selector",
-        help="Choose a portfolio to compare with your real account holdings"
+        help="Choose a portfolio to compare with your real account holdings",
     )
 
     return portfolio_options[selected_display_name] if selected_display_name else None
@@ -126,12 +128,16 @@ def render_portfolio_selector_for_comparison():
 def display_account_summary(account_data):
     """Display real account summary"""
     account_balance = account_data.get("account_balance", {})
-    
+
     # Account metrics
-    st.metric("Net Asset Value", format_currency(account_balance.get("net_asset_value", 0)))
-    st.metric("Available Cash", format_currency(account_balance.get("available_cash", 0)))
+    st.metric(
+        "Net Asset Value", format_currency(account_balance.get("net_asset_value", 0))
+    )
+    st.metric(
+        "Available Cash", format_currency(account_balance.get("available_cash", 0))
+    )
     st.metric("Cash Ratio", f"{account_balance.get('cash_ratio', 0):.2%}")
-    
+
     # Current positions
     current_positions = account_data.get("current_positions", [])
     if current_positions:
@@ -140,9 +146,11 @@ def display_account_summary(account_data):
             symbol = pos.get("symbol", "")
             quantity = pos.get("quantity", 0)
             weight = pos.get("weight", {})
-            weight_pct = weight.get("percentage", 0) if isinstance(weight, dict) else weight
+            weight_pct = (
+                weight.get("percentage", 0) if isinstance(weight, dict) else weight
+            )
             st.write(f"• {symbol}: {quantity:,} shares ({weight_pct:.1f}%)")
-        
+
         if len(current_positions) > 5:
             st.write(f"... and {len(current_positions) - 5} more positions")
 
@@ -151,14 +159,16 @@ def display_portfolio_summary_comparison(portfolio_data, portfolio_id):
     """Display portfolio summary for comparison"""
     # Portfolio basic info
     st.write(f"**Portfolio ID:** `{portfolio_id[:8]}...`")
-    
+
     # Risk metrics if available
     risk_metrics = portfolio_data.get("risk_metrics", {})
     if risk_metrics:
-        st.metric("Expected Return", f"{risk_metrics.get('portfolio_expected_return', 0):.2%}")
+        st.metric(
+            "Expected Return", f"{risk_metrics.get('portfolio_expected_return', 0):.2%}"
+        )
         st.metric("Volatility", f"{risk_metrics.get('portfolio_volatility', 0):.2%}")
         st.metric("Sharpe Ratio", f"{risk_metrics.get('sharpe_ratio', 0):.3f}")
-    
+
     # Portfolio composition
     portfolio_df = portfolio_data.get("portfolio_pnl_df")
     if portfolio_df and isinstance(portfolio_df, list) and len(portfolio_df) > 0:
@@ -166,10 +176,10 @@ def display_portfolio_summary_comparison(portfolio_data, portfolio_id):
         # Get latest weights from the portfolio data
         latest_data = portfolio_df[-1] if portfolio_df else {}
         symbols = portfolio_data.get("metadata", {}).get("symbols", [])
-        
+
         for symbol in symbols[:5]:  # Show top 5
             st.write(f"• {symbol}")
-            
+
         if len(symbols) > 5:
             st.write(f"... and {len(symbols) - 5} more stocks")
 
@@ -177,18 +187,18 @@ def display_portfolio_summary_comparison(portfolio_data, portfolio_id):
 def render_detailed_comparison(account_data, portfolio_data, strategy):
     """Render detailed comparison between account and portfolio"""
     st.subheader("📊 Detailed Comparison")
-    
+
     # Create comparison tabs
     comp_tab1, comp_tab2, comp_tab3 = st.tabs(
         ["📋 Holdings Comparison", "📈 Performance", "💡 Recommendations"]
     )
-    
+
     with comp_tab1:
         render_holdings_comparison(account_data, portfolio_data)
-        
+
     with comp_tab2:
         render_performance_comparison(account_data, portfolio_data)
-        
+
     with comp_tab3:
         render_rebalancing_recommendations(account_data, portfolio_data)
 
@@ -196,38 +206,49 @@ def render_detailed_comparison(account_data, portfolio_data, strategy):
 def render_holdings_comparison(account_data, portfolio_data):
     """Compare holdings between account and portfolio"""
     st.markdown("#### 📋 Holdings Comparison")
-    
+
     # Get current positions from account
     current_positions = account_data.get("current_positions", [])
     current_symbols = {pos.get("symbol"): pos for pos in current_positions}
-    
+
     # Get target symbols from portfolio
     target_symbols = portfolio_data.get("metadata", {}).get("symbols", [])
-    
+
     # Create comparison dataframe
     comparison_data = []
     all_symbols = set(current_symbols.keys()) | set(target_symbols)
-    
+
     for symbol in all_symbols:
         current_pos = current_symbols.get(symbol, {})
         current_weight = 0
         if current_pos:
             weight_data = current_pos.get("weight", {})
-            current_weight = weight_data.get("percentage", 0) if isinstance(weight_data, dict) else weight_data
-        
+            current_weight = (
+                weight_data.get("percentage", 0)
+                if isinstance(weight_data, dict)
+                else weight_data
+            )
+
         in_target = symbol in target_symbols
         target_weight = 100 / len(target_symbols) if in_target and target_symbols else 0
-        
-        comparison_data.append({
-            "Symbol": symbol,
-            "Current Weight (%)": f"{current_weight:.2f}",
-            "Target Weight (%)": f"{target_weight:.2f}" if in_target else "0.00",
-            "Difference": f"{current_weight - target_weight:.2f}",
-            "Action": "Hold" if abs(current_weight - target_weight) < 1 else ("Buy" if current_weight < target_weight else "Sell")
-        })
-    
+
+        comparison_data.append(
+            {
+                "Symbol": symbol,
+                "Current Weight (%)": f"{current_weight:.2f}",
+                "Target Weight (%)": f"{target_weight:.2f}" if in_target else "0.00",
+                "Difference": f"{current_weight - target_weight:.2f}",
+                "Action": (
+                    "Hold"
+                    if abs(current_weight - target_weight) < 1
+                    else ("Buy" if current_weight < target_weight else "Sell")
+                ),
+            }
+        )
+
     if comparison_data:
         import pandas as pd
+
         df_comparison = pd.DataFrame(comparison_data)
         st.dataframe(df_comparison, use_container_width=True)
 
@@ -235,20 +256,20 @@ def render_holdings_comparison(account_data, portfolio_data):
 def render_performance_comparison(account_data, portfolio_data):
     """Compare performance metrics"""
     st.markdown("#### 📈 Performance Comparison")
-    
+
     # Account metrics
     account_balance = account_data.get("account_balance", {})
     risk_metrics = portfolio_data.get("risk_metrics", {})
-    
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
         st.markdown("**Your Account**")
         nav = account_balance.get("net_asset_value", 0)
         cash_ratio = account_balance.get("cash_ratio", 0)
         st.metric("Net Asset Value", format_currency(nav))
         st.metric("Cash Ratio", f"{cash_ratio:.2%}")
-        
+
     with col2:
         st.markdown("**Target Portfolio**")
         expected_return = risk_metrics.get("portfolio_expected_return", 0)
@@ -262,48 +283,62 @@ def render_performance_comparison(account_data, portfolio_data):
 def render_rebalancing_recommendations(account_data, portfolio_data):
     """Provide rebalancing recommendations"""
     st.markdown("#### 💡 Rebalancing Recommendations")
-    
+
     current_positions = account_data.get("current_positions", [])
     target_symbols = portfolio_data.get("metadata", {}).get("symbols", [])
-    
+
     if not target_symbols:
         st.info("No target portfolio symbols available for recommendations.")
         return
-    
+
     # Calculate total account value for rebalancing
     account_balance = account_data.get("account_balance", {})
     total_value = account_balance.get("net_asset_value", 0)
-    
+
     if total_value <= 0:
         st.warning("Cannot generate recommendations without valid account value.")
         return
-    
+
     st.success(f"� Based on your account value of {format_currency(total_value)}:")
-    
+
     # Equal weight allocation
     target_weight_per_stock = 100 / len(target_symbols)
     target_value_per_stock = total_value * (target_weight_per_stock / 100)
-    
-    st.info(f"🎯 Target allocation: {target_weight_per_stock:.2f}% per stock ({format_currency(target_value_per_stock)} each)")
-    
+
+    st.info(
+        f"🎯 Target allocation: {target_weight_per_stock:.2f}% per stock ({format_currency(target_value_per_stock)} each)"
+    )
+
     # Show recommendations for each target symbol
     for symbol in target_symbols:
-        current_pos = next((pos for pos in current_positions if pos.get("symbol") == symbol), None)
+        current_pos = next(
+            (pos for pos in current_positions if pos.get("symbol") == symbol), None
+        )
         current_value = 0
-        
+
         if current_pos:
             quantity = current_pos.get("quantity", 0)
             market_price_data = current_pos.get("market_price", {})
-            price = market_price_data.get("amount", 0) if isinstance(market_price_data, dict) else market_price_data
+            price = (
+                market_price_data.get("amount", 0)
+                if isinstance(market_price_data, dict)
+                else market_price_data
+            )
             current_value = quantity * price
-        
+
         difference = target_value_per_stock - current_value
-        
-        if abs(difference) > total_value * 0.01:  # Only recommend if difference > 1% of total value
+
+        if (
+            abs(difference) > total_value * 0.01
+        ):  # Only recommend if difference > 1% of total value
             if difference > 0:
-                st.write(f"📈 **{symbol}**: Buy {format_currency(abs(difference))} more")
+                st.write(
+                    f"📈 **{symbol}**: Buy {format_currency(abs(difference))} more"
+                )
             else:
-                st.write(f"📉 **{symbol}**: Sell {format_currency(abs(difference))} worth")
+                st.write(
+                    f"📉 **{symbol}**: Sell {format_currency(abs(difference))} worth"
+                )
         else:
             st.write(f"✅ **{symbol}**: Current allocation is appropriate")
 
@@ -322,9 +357,9 @@ def render_rebalancing_recommendations(account_data, portfolio_data):
 #     if current_positions and target_weights:
 #         display_weight_comparison_chart(current_positions, target_weights)
 
-    # Historical performance (simulated)
-    # if st.checkbox("Show Historical Performance", value=False):
-    #     display_simulated_performance()
+# Historical performance (simulated)
+# if st.checkbox("Show Historical Performance", value=False):
+#     display_simulated_performance()
 
 
 # def display_simulated_performance():
@@ -428,7 +463,7 @@ def render_rebalancing_recommendations(account_data, portfolio_data):
 #         #     if st.session_state.get("broker_account_id"):
 #         #         success = send_portfolio_notification(
 #         #             st.session_state.broker_account_id,
-#         #             st.session_state.get("strategy_type", "market_neutral"),
+#         #             st.session_state.get("strategy_type", "MarketNeutral"),
 #         #         )
 #         #         if success:
 #         #             st.success("Test notification sent!")

@@ -7,8 +7,8 @@ class StrategyFactory:
     @staticmethod
     def create_strategy(strategy_type: str) -> BasePortfolioStrategy:
         strategies = {
-            "long_only": LongOnlyStrategy(),
-            "market_neutral": MarketNeutralStrategy(),
+            "LongOnly": LongOnlyStrategy(),
+            "MarketNeutral": MarketNeutralStrategy(),
         }
         if strategy_type not in strategies:
             raise ValueError(f"Unknown strategy type: {strategy_type}")

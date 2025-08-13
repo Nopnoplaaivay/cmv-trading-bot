@@ -5,8 +5,6 @@ from ..utils.config import API_BASE_URL
 from .auth import get_auth_headers, handle_auth_error
 
 
-
-
 def setup_dnse_account(custody_code: str, password: str) -> bool:
     """Setup DNSE account via API"""
     try:
@@ -33,7 +31,7 @@ def setup_dnse_account(custody_code: str, password: str) -> bool:
 
 def send_portfolio_notification(
     broker_account_id: str,
-    strategy_type: str = "market_neutral",
+    strategy_type: str = "MarketNeutral",
     include_trade_plan: bool = True,
 ) -> bool:
     """Send portfolio notification to Telegram"""

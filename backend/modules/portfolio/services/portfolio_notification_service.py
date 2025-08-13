@@ -1,10 +1,12 @@
 from backend.common.consts import SQLServerConsts, MessageConsts
 from backend.common.responses.exceptions import BaseExceptionResponse
 from backend.modules.portfolio.services.data_providers import PortfolioDataProvider
-from backend.modules.portfolio.services.portfolio_analysis_service import PortfolioAnalysisService
+from backend.modules.portfolio.services.portfolio_analysis_service import (
+    PortfolioAnalysisService,
+)
 from backend.modules.portfolio.infrastructure import (
     TradingCalendarService,
-    PortfolioReportGenerator
+    PortfolioReportGenerator,
 )
 from backend.modules.notifications.service import notification_service
 from backend.modules.notifications.service import notify_error
@@ -23,16 +25,22 @@ class PortfolioNotificationService:
                 cls.trading_calendar.get_last_next_trading_dates()
             )
             if not last_trading_date or not next_trading_date:
-                LOGGER.warning("No trading dates found. Cannot proceed with portfolio analysis.")
+                LOGGER.warning(
+                    "No trading dates found. Cannot proceed with portfolio analysis."
+                )
                 raise BaseExceptionResponse(
                     http_code=400,
                     status_code=400,
                     message=MessageConsts.NOT_FOUND,
-                    errors=None
+                    errors=None,
                 )
-            
-            next_trading_date_str = next_trading_date.strftime(SQLServerConsts.DATE_FORMAT)
-            last_trading_date_str = last_trading_date.strftime(SQLServerConsts.DATE_FORMAT)
+
+            next_trading_date_str = next_trading_date.strftime(
+                SQLServerConsts.DATE_FORMAT
+            )
+            last_trading_date_str = last_trading_date.strftime(
+                SQLServerConsts.DATE_FORMAT
+            )
 
             # Initialize notification service
             if not notification_service.is_ready():
@@ -44,12 +52,14 @@ class PortfolioNotificationService:
                     http_code=400,
                     status_code=400,
                     message=MessageConsts.NOT_FOUND,
-                    errors=None
+                    errors=None,
                 )
 
             # Get portfolio data
-            portfolio_data = await cls.portfolio_data_provider.get_system_portfolio(
-                last_trading_date_str, next_trading_date_str
+            portfolio_data = (
+                await cls.portfolio_data_provider.get_portfolio_weights_by_id(
+                    last_trading_date_str, next_trading_date_str
+                )
             )
 
             if not portfolio_data:
@@ -57,11 +67,13 @@ class PortfolioNotificationService:
                     http_code=404,
                     status_code=404,
                     message=MessageConsts.NOT_FOUND,
-                    errors=None
+                    errors=None,
                 )
 
             # Notify about daily portfolio weights
-            await notification_service.notify_daily_portfolio(portfolio_data=portfolio_data)
+            await notification_service.notify_daily_portfolio(
+                portfolio_data=portfolio_data
+            )
             return {"message": "Daily portfolio notification sent successfully"}
 
         except Exception as e:
@@ -69,22 +81,24 @@ class PortfolioNotificationService:
                 http_code=500,
                 status_code=500,
                 message=MessageConsts.INTERNAL_SERVER_ERROR,
-                errors=str(e)
+                errors=str(e),
             )
 
     @classmethod
     async def send_portfolio_analysis_report(
         cls,
         broker_account_id: str,
-        strategy_type: str = "market_neutral",
+        strategy_type: str = "MarketNeutral",
         include_trade_plan: bool = True,
         message_type: MessageType = MessageType.INFO,
     ):
         try:
-            LOGGER.info(f"Generating portfolio analysis report for account {broker_account_id}")
+            LOGGER.info(
+                f"Generating portfolio analysis report for account {broker_account_id}"
+            )
 
             # Generate portfolio analysis
-            analysis_result = await PortfolioAnalysisService.analyze_system_portfolio(
+            analysis_result = await PortfolioAnalysisService.analyze_portfolio(
                 broker_account_id=broker_account_id, strategy_type=strategy_type
             )
 
@@ -116,17 +130,23 @@ class PortfolioNotificationService:
             )
 
             if success:
-                LOGGER.info(f"Portfolio analysis report sent successfully for account {broker_account_id}")
+                LOGGER.info(
+                    f"Portfolio analysis report sent successfully for account {broker_account_id}"
+                )
                 return {"message": "Portfolio analysis report sent successfully"}
             else:
-                LOGGER.error(f"Failed to send portfolio analysis report for account {broker_account_id}")
+                LOGGER.error(
+                    f"Failed to send portfolio analysis report for account {broker_account_id}"
+                )
                 return {"message": "Failed to send portfolio analysis report"}
 
         except Exception as e:
-            LOGGER.error(f"Error sending portfolio analysis report for account {broker_account_id}: {e}")
+            LOGGER.error(
+                f"Error sending portfolio analysis report for account {broker_account_id}: {e}"
+            )
             raise BaseExceptionResponse(
                 http_code=500,
                 status_code=500,
                 message=MessageConsts.INTERNAL_SERVER_ERROR,
-                errors=str(e)
+                errors=str(e),
             )

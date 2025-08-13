@@ -11,32 +11,35 @@ class PortfolioDataProvider:
     repo = PortfoliosRepo
 
     @classmethod
-    async def get_system_portfolio(
-        cls, last_trading_date: str, next_trading_date: str
-    ) -> Optional[Dict]:
+    async def get_portfolio_weights_by_id(cls, portfolio_id) -> Optional[Dict]:
         try:
             with cls.repo.session_scope() as session:
-                portfolio_id = PortfolioUtils.generate_general_portfolio_id(date=last_trading_date)
-
-                conditions = {
-                    Portfolios.portfolioId.name: portfolio_id,
-                    Portfolios.date.name: last_trading_date
-                }
+                conditions = {Portfolios.portfolioId.name: portfolio_id}
                 records = await cls.repo.get_by_condition(conditions=conditions)
 
                 if not records:
                     return None
 
+                latest_date = max(record[Portfolios.date.name] for record in records)
+                portfolios = [
+                    record
+                    for record in records
+                    if (
+                        record[Portfolios.portfolioId.name] == portfolio_id
+                        and record[Portfolios.date.name] == latest_date
+                    )
+                ]
+
                 long_only_positions = []
                 market_neutral_positions = []
 
-                for record in records:
-                    symbol = record[Portfolios.symbol.name]
+                for position in portfolios:
+                    symbol = position[Portfolios.symbol.name]
                     initial_weight_pct = float(
-                        record[Portfolios.initialWeight.name] * 100 or 0
+                        position[Portfolios.initialWeight.name] * 100 or 0
                     )
                     neutralized_weight_pct = float(
-                        record[Portfolios.neutralizedWeight.name] * 100 or 0
+                        position[Portfolios.neutralizedWeight.name] * 100 or 0
                     )
 
                     if initial_weight_pct >= 1:
@@ -44,7 +47,7 @@ class PortfolioDataProvider:
                             {
                                 "symbol": symbol,
                                 "marketPrice": float(
-                                    record[Portfolios.marketPrice.name]
+                                    position[Portfolios.marketPrice.name]
                                 ),
                                 "weight": float(initial_weight_pct),
                             }
@@ -55,7 +58,7 @@ class PortfolioDataProvider:
                             {
                                 "symbol": symbol,
                                 "marketPrice": float(
-                                    record[Portfolios.marketPrice.name]
+                                    position[Portfolios.marketPrice.name]
                                 ),
                                 "weight": float(
                                     min(
@@ -71,13 +74,11 @@ class PortfolioDataProvider:
                 session.commit()
 
             return {
-                "date": next_trading_date,
-                "long_only": long_only_positions,
-                "market_neutral": market_neutral_positions,
+                "date": latest_date,
+                "LongOnly": long_only_positions,
+                "MarketNeutral": market_neutral_positions,
             }
 
         except Exception as e:
-            LOGGER.error(
-                f"Error getting portfolio weights: {e}"
-            )
+            LOGGER.error(f"Error getting portfolio weights: {e}")
             return None
