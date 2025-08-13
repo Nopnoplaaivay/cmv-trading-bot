@@ -1,11 +1,10 @@
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from decimal import Decimal
 
 from backend.common.consts import SQLServerConsts, MessageConsts
 from backend.common.responses.exceptions.base_exceptions import BaseExceptionResponse
-from backend.modules.auth.types import JwtPayload
 from backend.modules.dnse.trading_session import TradingSession
-from backend.modules.portfolio.core import Position, Money, Weight
+from backend.modules.portfolio.core import Money
 from backend.modules.portfolio.core.strategies import StrategyFactory
 from backend.modules.portfolio.services.processors import (
     PortfolioProcessor,
@@ -24,7 +23,6 @@ from backend.utils.json_utils import JSONUtils
 LOGGER_PREFIX = "[PortfolioAnalysis]"
 
 
-# Main Portfolio Analysis Service
 class PortfolioAnalysisService:
     portfolio_data_provider = PortfolioDataProvider
     account_data_provider = AccountDataProvider
@@ -61,12 +59,8 @@ class PortfolioAnalysisService:
                     )
 
                 async with session.users_client() as users_client:
-                    balance_dict = await users_client.get_account_balance(
-                        account_no=broker_account_id
-                    )
-                    deals_dict = await users_client.get_account_deals(
-                        account_no=broker_account_id
-                    )
+                    balance_dict = await users_client.get_account_balance(account_no=broker_account_id)
+                    deals_dict = await users_client.get_account_deals(account_no=broker_account_id)
 
                     if not balance_dict:
                         LOGGER.warning(
@@ -81,12 +75,8 @@ class PortfolioAnalysisService:
                         return None
 
                     deals_list = deals_dict.get("deals", [])
-                    available_cash = Money(
-                        Decimal(str(balance_dict.get("availableCash", 0)))
-                    )
-                    net_asset_value = Money(
-                        Decimal(str(balance_dict.get("netAssetValue", 0)))
-                    )
+                    available_cash = Money(Decimal(str(balance_dict.get("availableCash", 0))))
+                    net_asset_value = Money(Decimal(str(balance_dict.get("netAssetValue", 0))))
                     stock_value = Money(Decimal(str(balance_dict.get("stockValue", 0))))
 
                     # Process current deals into portfolio positions

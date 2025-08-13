@@ -37,8 +37,8 @@ def render_portfolio_analysis_page():
             st.success("Cache cleared!")
             st.rerun()
 
-    tab1, tab2, tab3 = st.tabs(
-        ["📊 Performance Chart", "📋 Risk Metrics", "📈 Detailed Analysis"]
+    tab1, tab2 = st.tabs(
+        ["📊 Performance Chart", "📋 Risk Metrics"]
     )
 
     with tab1:
@@ -47,8 +47,8 @@ def render_portfolio_analysis_page():
     with tab2:
         render_risk_metrics_real_with_data(portfolio_data, strategy)
 
-    with tab3:
-        render_detailed_risk_analysis_tab_with_data(portfolio_data, strategy)
+    # with tab3:
+    #     render_detailed_risk_analysis_tab_with_data(portfolio_data, strategy)
 
 
 def load_portfolio_data_cached(portfolio_id: str, strategy: str) -> Optional[Dict]:
@@ -597,25 +597,8 @@ def render_detailed_risk_analysis(portfolio_metrics: dict, vnindex_metrics: dict
         ("Max Return", "max_return_pct", "%", "Maximum return reached"),
         ("Min Return", "min_return_pct", "%", "Minimum return (maximum loss)"),
         ("Daily Volatility", "daily_volatility_pct", "%", "Daily price volatility"),
-        (
-            "Downside Volatility",
-            "downside_volatility_pct",
-            "%",
-            "Volatility of negative returns",
-        ),
+        ("Downside Volatility", "downside_volatility_pct", "%", "Volatility of negative returns"),
         ("Max Drawdown", "max_dd_pct", "%", "Maximum peak-to-trough decline"),
-        (
-            "Avg DD Duration",
-            "avg_dd_duration_days",
-            "days",
-            "Average drawdown duration",
-        ),
-        (
-            "Max DD Duration",
-            "max_dd_duration_days",
-            "days",
-            "Maximum drawdown duration",
-        ),
         ("CVaR (95%)", "cvar_95_daily_pct", "%", "Conditional Value at Risk"),
         ("Best Day", "best_day_pct", "%", "Best single day return"),
         ("Worst Day", "worst_day_pct", "%", "Worst single day return"),

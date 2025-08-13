@@ -45,18 +45,18 @@ def render_sidebar():
         if broker_account_id:
             st.session_state.broker_account_id = broker_account_id
 
-        # Strategy Selection
-        strategy_type = st.selectbox(
-            "📊 Trading Strategy",
-            ["MarketNeutral", "LongOnly"],
-            index=(
-                0
-                if st.session_state.get("strategy_type", "MarketNeutral")
-                == "MarketNeutral"
-                else 1
-            ),
-        )
-        st.session_state.strategy_type = strategy_type
+        # # Strategy Selection
+        # strategy_type = st.selectbox(
+        #     "📊 Trading Strategy",
+        #     ["MarketNeutral", "LongOnly"],
+        #     index=(
+        #         0
+        #         if st.session_state.get("strategy_type", "MarketNeutral")
+        #         == "MarketNeutral"
+        #         else 1
+        #     ),
+        # )
+        # st.session_state.strategy_type = strategy_type
 
         st.divider()
 
@@ -71,7 +71,6 @@ def render_sidebar():
 
 
 def render_quick_actions():
-    """Render quick action buttons"""
     st.markdown("### ⚡ Quick Actions")
     col1, col2 = st.columns(2)
 
@@ -87,7 +86,6 @@ def render_quick_actions():
 
 
 def render_system_status():
-    """Render system status"""
     st.markdown("### 🟢 System Status")
 
     col1, col2 = st.columns(2)
@@ -98,16 +96,18 @@ def render_system_status():
 
 
 def render_logout_button():
-    """Render logout functionality"""
     st.divider()
 
     if st.button("🚪 Logout", use_container_width=True, type="secondary"):
         from ..services.auth import logout_user
 
-        if st.session_state.get("refresh_token"):
-            logout_user(st.session_state.refresh_token)
+        logout_payload = {
+            "sessionId": st.session_state.get("session_id", ""),
+            "userId": st.session_state.get("user_id", ""),
+            "role": st.session_state.get("role", ""),
+        }
+        logout_user(logout_payload)
 
-        # Clear all session state
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()

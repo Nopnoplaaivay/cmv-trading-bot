@@ -720,7 +720,7 @@ class PortfoliosService(BaseDailyService):
                 all_dates = sorted(list(portfolio_dates.union(index_dates)))
 
                 # Take only the latest 252 trading days
-                TRADING_DAYS = 254  # 2 days buffer to calculate T + 2 daily return
+                TRADING_DAYS = 252
                 if len(all_dates) > TRADING_DAYS:
                     latest_dates = all_dates[-TRADING_DAYS:]
                 else:
@@ -742,18 +742,14 @@ class PortfoliosService(BaseDailyService):
                         portfolio_pnl_df, on="date", how="left"
                     )
                     # Forward fill missing pnl_pct values
-                    portfolio_complete["pnl_pct"] = portfolio_complete[
-                        "pnl_pct"
-                    ].ffill()
-                    # If first values are NaN, fill with 0
-                    portfolio_complete["pnl_pct"] = portfolio_complete[
-                        "pnl_pct"
-                    ].fillna(0)
-
-                    # Forward fill missing pnl values if they exist
-                    if "pnl" in portfolio_complete.columns:
-                        portfolio_complete["pnl"] = portfolio_complete["pnl"].ffill()
-                        portfolio_complete["pnl"] = portfolio_complete["pnl"].fillna(0)
+                    portfolio_complete["pnl_pct"] = portfolio_complete["pnl_pct"].ffill()
+                    portfolio_complete["pnl_pct"] = portfolio_complete["pnl_pct"].fillna(0)
+                    portfolio_complete["pnl"] = portfolio_complete["pnl"].ffill()
+                    portfolio_complete["pnl"] = portfolio_complete["pnl"].fillna(0)
+                    portfolio_complete["daily_profit_pct"] = portfolio_complete["daily_profit_pct"].ffill()
+                    portfolio_complete["daily_profit_pct"] = portfolio_complete["daily_profit_pct"].fillna(0)
+                    portfolio_complete["drawdown_pct"] = portfolio_complete["drawdown_pct"].ffill()
+                    portfolio_complete["drawdown_pct"] = portfolio_complete["drawdown_pct"].fillna(0)
 
                     # Merge and forward fill index data
                     index_complete = complete_dates_df.merge(
@@ -761,13 +757,13 @@ class PortfoliosService(BaseDailyService):
                     )
                     # Forward fill missing pnl_pct values
                     index_complete["pnl_pct"] = index_complete["pnl_pct"].ffill()
-                    # If first values are NaN, fill with 0
                     index_complete["pnl_pct"] = index_complete["pnl_pct"].fillna(0)
-
-                    # Forward fill missing pnl values if they exist
-                    if "pnl" in index_complete.columns:
-                        index_complete["pnl"] = index_complete["pnl"].ffill()
-                        index_complete["pnl"] = index_complete["pnl"].fillna(0)
+                    index_complete["pnl"] = index_complete["pnl"].ffill()
+                    index_complete["pnl"] = index_complete["pnl"].fillna(0)
+                    index_complete["daily_profit_pct"] = index_complete["daily_profit_pct"].ffill()
+                    index_complete["daily_profit_pct"] = index_complete["daily_profit_pct"].fillna(0)
+                    index_complete["drawdown_pct"] = index_complete["drawdown_pct"].ffill()
+                    index_complete["drawdown_pct"] = index_complete["drawdown_pct"].fillna(0)
 
                     # Convert back to string format for response
                     portfolio_complete["date"] = portfolio_complete["date"].dt.strftime(
@@ -782,8 +778,8 @@ class PortfoliosService(BaseDailyService):
 
                 else:
                     # If no dates available, create empty dataframes with proper columns
-                    portfolio_pnl_df = pd.DataFrame(columns=["date", "pnl_pct", "pnl"])
-                    index_pnl_df = pd.DataFrame(columns=["date", "pnl_pct", "pnl"])
+                    portfolio_pnl_df = pd.DataFrame(columns=["date", "pnl_pct", "pnl", "daily_profit_pct", "drawdown_pct"])
+                    index_pnl_df = pd.DataFrame(columns=["date", "pnl_pct", "pnl", "daily_profit_pct", "drawdown_pct"])
                     latest_dates = []
 
                 portfolio_risk_metrics = PortfolioRiskCalculator(

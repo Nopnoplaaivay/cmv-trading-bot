@@ -1,5 +1,10 @@
+import sys
+import os
 import datetime
 import pytz
+
+# Add the project root to Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.utils.time_utils import TimeUtils
 from backend.modules.portfolio.services import PortfoliosService
@@ -71,9 +76,10 @@ async def test_pnl_df():
     from backend.modules.portfolio.services import PortfoliosService
 
     portfolio_id = "SYSTEM-2025-08"
+    portfolio_id = "CUSTOM-2-BANK-6CCD4D73"
     pnl_data = await PortfoliosService.get_portfolio_pnl(portfolio_id=portfolio_id)
-    print(json.dumps(pnl_data, indent=4, ensure_ascii=False))
-
+    risk_metrics = pnl_data.get("risk_metrics", {})
+    print(json.dumps(risk_metrics, indent=4, ensure_ascii=False))
 
 
 if __name__ == "__main__":

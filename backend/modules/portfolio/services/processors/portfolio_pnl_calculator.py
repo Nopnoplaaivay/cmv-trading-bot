@@ -13,7 +13,9 @@ class PortfolioPnLCalculator:
         portfolio_data = portfolio_weights_df.copy()
 
         if portfolio_data.empty:
-            return pd.DataFrame(columns=["date", "pnl_pct"])
+            return pd.DataFrame(
+                columns=["date", "pnl_pct", "pnl", "drawdown_pct", "drawdown"]
+            )
 
         # Sort by date to ensure proper order
         portfolio_data["date"] = pd.to_datetime(portfolio_data["date"])
@@ -60,10 +62,21 @@ class PortfolioPnLCalculator:
         result_df["pnl_pct"] = (result_df["portfolio_value"] / BOOK_SIZE - 1) * 100
         result_df["pnl"] = result_df["portfolio_value"] - BOOK_SIZE
 
+        # Tính daily profit = PnL t - Pnl at (t-1): cột G, ngày đầu ko có t-1 thì gán bằng 0
+        result_df["daily_profit"] = result_df["pnl"].diff().fillna(0)
+        result_df["daily_profit_pct"] = result_df["daily_profit"] / BOOK_SIZE
+
+        # Calculate drawdown
+        running_max = result_df["portfolio_value"].expanding().max()
+        result_df["drawdown_pct"] = (
+            (running_max - result_df["portfolio_value"]) / BOOK_SIZE
+        )
+        result_df["drawdown"] = (running_max - result_df["portfolio_value"])
+
         # Format date
         result_df["date"] = result_df["date"].dt.strftime(SQLServerConsts.DATE_FORMAT)
 
-        return result_df[["date", "pnl_pct", "pnl"]]
+        return result_df[["date", "pnl_pct", "pnl", "drawdown_pct", "drawdown", "daily_profit_pct"]]
 
     @staticmethod
     def process_index_pnl(df_index: pd.DataFrame) -> pd.DataFrame:
@@ -71,7 +84,9 @@ class PortfolioPnLCalculator:
         index_data = df_index.copy()
 
         if index_data.empty:
-            return pd.DataFrame(columns=["date", "pnl_pct"])
+            return pd.DataFrame(
+                columns=["date", "pnl_pct", "pnl", "drawdown_pct", "drawdown", "daily_profit_pct"]
+            )
 
         # Sort by date to ensure proper order
         index_data["date"] = pd.to_datetime(index_data["date"])
@@ -114,7 +129,17 @@ class PortfolioPnLCalculator:
         result_df["pnl_pct"] = (result_df["index_value"] / BOOK_SIZE - 1) * 100
         result_df["pnl"] = result_df["index_value"] - BOOK_SIZE
 
+        result_df["daily_profit"] = result_df["pnl"].diff().fillna(0)
+        result_df["daily_profit_pct"] = result_df["daily_profit"] / BOOK_SIZE
+
+        # Calculate drawdown
+        running_max = result_df["index_value"].expanding().max()
+        result_df["drawdown_pct"] = (
+            (running_max - result_df["index_value"]) / BOOK_SIZE
+        )
+        result_df["drawdown"] = (running_max - result_df["index_value"])
+
         # Format date
         result_df["date"] = result_df["date"].dt.strftime(SQLServerConsts.DATE_FORMAT)
 
-        return result_df[["date", "pnl_pct", "pnl"]]
+        return result_df[["date", "pnl_pct", "pnl", "drawdown_pct", "drawdown", "daily_profit_pct"]]

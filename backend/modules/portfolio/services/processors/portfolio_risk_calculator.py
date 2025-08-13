@@ -2,17 +2,13 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 
-from backend.utils.logger import LOGGER
-
-LOGGER_PREFIX = "[RiskCalculator]"
-
 
 class PortfolioRiskCalculator:
     def __init__(self, df_pnl):
         self.trading_days = 252
         self.risk_free_rate = 0
-        self.df_pnl = df_pnl.iloc[-self.trading_days:].copy().reset_index(drop=True)
-        self.daily_returns = df_pnl["pnl_pct"].pct_change(2).dropna()
+        self.df_pnl = df_pnl.iloc[-self.trading_days:].copy()
+        self.daily_profit_pct = df_pnl["daily_profit_pct"].iloc[-self.trading_days:].copy()
         
 
     def calculate_basic_metrics(self):
@@ -27,14 +23,14 @@ class PortfolioRiskCalculator:
         }
 
     def calculate_volatility_metrics(self):
-        if len(self.daily_returns) < 2:
+        if len(self.daily_profit_pct) < 2:
             return {
                 "daily_volatility_pct": 0.0,
                 "annualized_volatility_pct": 0.0,
                 "downside_volatility_pct": 0.0,
             }
 
-        daily_vol = self.daily_returns.std()
+        daily_vol = self.daily_profit_pct.std()
 
         # Handle NaN case
         if pd.isna(daily_vol) or np.isinf(daily_vol):
@@ -42,7 +38,7 @@ class PortfolioRiskCalculator:
 
         annualized_vol = daily_vol * np.sqrt(self.trading_days)
 
-        downside_returns = self.daily_returns[self.daily_returns < 0]
+        downside_returns = self.daily_profit_pct[self.daily_profit_pct < 0]
         downside_vol = 0.0
         if len(downside_returns) > 0:
             downside_std = downside_returns.std()
@@ -58,9 +54,8 @@ class PortfolioRiskCalculator:
     def calculate_risk_adjusted_ratios(self):
         daily_rf_rate = self.risk_free_rate / self.trading_days
 
-        # Sharpe Ratio
-        excess_returns = self.daily_returns - daily_rf_rate
-        daily_std = self.daily_returns.std()
+        excess_returns = self.daily_profit_pct - daily_rf_rate
+        daily_std = self.daily_profit_pct.std()
 
         sharpe_ratio = 0.0
         if daily_std > 0 and not pd.isna(daily_std) and not np.isinf(daily_std):
@@ -68,8 +63,7 @@ class PortfolioRiskCalculator:
             if not pd.isna(sharpe_calc) and not np.isinf(sharpe_calc):
                 sharpe_ratio = sharpe_calc
 
-        # Sortino Ratio
-        downside_returns = self.daily_returns[self.daily_returns < daily_rf_rate]
+        downside_returns = self.daily_profit_pct[self.daily_profit_pct < daily_rf_rate]
         sortino_ratio = 0.0
 
         if len(downside_returns) > 0:
@@ -80,7 +74,7 @@ class PortfolioRiskCalculator:
                 and not np.isinf(downside_std)
             ):
                 sortino_calc = (
-                    (self.daily_returns.mean() - daily_rf_rate)
+                    (self.daily_profit_pct.mean() - daily_rf_rate)
                     / downside_std
                     * np.sqrt(self.trading_days)
                 )
@@ -92,73 +86,43 @@ class PortfolioRiskCalculator:
             "sortino_ratio": round(sortino_ratio, 2),
         }
 
-    def calculate_drawdown_metrics(self):
-        cumulative_returns = (1 + self.df_pnl["pnl_pct"] / 100).cumprod()
-        running_max = cumulative_returns.expanding().max()
-        drawdowns = (cumulative_returns - running_max) / running_max * 100
+    def calculate_drawdown_metrics(self):        
+        max_drawdown = self.df_pnl["drawdown_pct"].max() * 100
 
-        max_drawdown = drawdowns.min()
-
-        is_drawdown = drawdowns < -0.01
-        drawdown_periods = self._calculate_drawdown_periods(is_drawdown)
-
-        avg_drawdown_duration = np.mean(drawdown_periods) if drawdown_periods else 0
-        max_drawdown_duration = max(drawdown_periods) if drawdown_periods else 0
+        df_pnl = self.df_pnl.copy()
 
         total_return = self.df_pnl["pnl_pct"].iloc[-1]
         calmar_ratio = total_return / abs(max_drawdown) if max_drawdown != 0 else 0
 
         return {
             "max_dd_pct": round(max_drawdown, 2),
-            "avg_dd_duration_days": round(avg_drawdown_duration, 0),
-            "max_dd_duration_days": round(max_drawdown_duration, 0),
             "calmar_ratio": round(calmar_ratio, 2),
         }
 
-    def _calculate_drawdown_periods(self, is_drawdown_series):
-        drawdown_periods = []
-        current_dd_length = 0
-
-        for is_dd in is_drawdown_series:
-            if is_dd:
-                current_dd_length += 1
-            else:
-                if current_dd_length > 0:
-                    drawdown_periods.append(current_dd_length)
-                current_dd_length = 0
-
-        # Handle case nếu kết thúc trong drawdown
-        if current_dd_length > 0:
-            drawdown_periods.append(current_dd_length)
-
-        return drawdown_periods
 
     def calculate_var_cvar(self, confidence_level=0.05):
-        if len(self.daily_returns) == 0:
+        if len(self.daily_profit_pct) == 0:
             return {
                 f"var_{int((1-confidence_level)*100)}_daily_pct": 0.0,
                 f"cvar_{int((1-confidence_level)*100)}_daily_pct": 0.0,
             }
 
-        var = np.percentile(self.daily_returns, confidence_level * 100)
-
+        var = np.percentile(self.daily_profit_pct, confidence_level * 100)
         if pd.isna(var) or np.isinf(var):
             var = 0.0
 
-        tail_returns = self.daily_returns[self.daily_returns <= var]
-        cvar = 0.0
-        if len(tail_returns) > 0:
-            cvar_calc = tail_returns.mean()
-            if not pd.isna(cvar_calc) and not np.isinf(cvar_calc):
-                cvar = cvar_calc
+        tail_returns = self.daily_profit_pct[self.daily_profit_pct <= var]
+        cvar = tail_returns.mean() if len(tail_returns) > 0 else 0.0
+        if pd.isna(cvar) or np.isinf(cvar):
+            cvar = 0.0
 
         return {
-            f"var_{int((1-confidence_level)*100)}_daily_pct": round(var, 4),
-            f"cvar_{int((1-confidence_level)*100)}_daily_pct": round(cvar, 4),
+            f"var_{int((1-confidence_level)*100)}_daily_pct": round(var * 100, 4),
+            f"cvar_{int((1-confidence_level)*100)}_daily_pct": round(cvar * 100, 4),
         }
 
     def calculate_performance_metrics(self):
-        if len(self.daily_returns) == 0:
+        if len(self.daily_profit_pct) == 0:
             return {
                 "win_rate_pct": 0.0,
                 "best_day_pct": 0.0,
@@ -167,33 +131,26 @@ class PortfolioRiskCalculator:
                 "kurtosis": 0.0,
             }
 
-        win_rate = (self.daily_returns > 0).mean() * 100
+        win_rate = (self.daily_profit_pct > 0).mean() * 100
+        best_day = self.daily_profit_pct.max()
+        worst_day = self.daily_profit_pct.min()
 
-        best_day = self.daily_returns.max()
-        worst_day = self.daily_returns.min()
-
-        if pd.isna(best_day) or np.isinf(best_day):
-            best_day = 0.0
-        if pd.isna(worst_day) or np.isinf(worst_day):
-            worst_day = 0.0
-
-        best_day_pct = min(best_day * 100, 1000) 
-        worst_day_pct = max(worst_day * 100, -1000)  
+        best_day_pct = min(best_day * 100, 1000)
+        worst_day_pct = max(worst_day * 100, -1000)
 
         skewness = 0.0
         kurtosis = 0.0
-
         try:
-            if len(self.daily_returns) > 2:
-                skew_calc = stats.skew(self.daily_returns)
+            if len(self.daily_profit_pct) > 2:
+                skew_calc = stats.skew(self.daily_profit_pct)
                 if not pd.isna(skew_calc) and not np.isinf(skew_calc):
                     skewness = skew_calc
 
-                kurt_calc = stats.kurtosis(self.daily_returns)
+                kurt_calc = stats.kurtosis(self.daily_profit_pct)
                 if not pd.isna(kurt_calc) and not np.isinf(kurt_calc):
                     kurtosis = kurt_calc
-        except:
-            pass
+        except Exception as e:
+            print(f"Error calculating skewness/kurtosis: {e}")
 
         return {
             "win_rate_pct": round(win_rate, 2),
@@ -205,65 +162,32 @@ class PortfolioRiskCalculator:
 
     def calculate_rolling_metrics(self, window=21):
         daily_rf_rate = self.risk_free_rate / self.trading_days
-
-        # Rolling Sharpe Ratio
-        rolling_excess = self.daily_returns.rolling(window).mean() - daily_rf_rate
-        rolling_vol = self.daily_returns.rolling(window).std()
-        rolling_sharpe = (
-            rolling_excess / rolling_vol * np.sqrt(self.trading_days)
-        ).dropna()
-
-        # Rolling Volatility
-        rolling_volatility = (
-            self.daily_returns.rolling(window).std() * np.sqrt(self.trading_days) * 100
-        ).dropna()
-
+        rolling_excess = self.daily_profit_pct.rolling(window).mean() - daily_rf_rate
+        rolling_vol = self.daily_profit_pct.rolling(window).std()
+        rolling_sharpe = (rolling_excess / rolling_vol * np.sqrt(self.trading_days)).dropna()
+        rolling_volatility = (self.daily_profit_pct.rolling(window).std() * np.sqrt(self.trading_days) * 100).dropna()
         return rolling_sharpe, rolling_volatility
 
     def calculate_fitness_score(self, portfolio_metrics, benchmark_metrics):
         portfolio_return = portfolio_metrics["total_return_pct"]
         benchmark_return = benchmark_metrics["total_return_pct"]
-
         portfolio_vol = portfolio_metrics.get("annualized_volatility_pct", 0)
         benchmark_vol = benchmark_metrics.get("annualized_volatility_pct", 0)
-
         portfolio_drawdown = abs(portfolio_metrics.get("max_dd_pct", 0))
         benchmark_drawdown = abs(benchmark_metrics.get("max_dd_pct", 0))
-
         excess_return = portfolio_return - benchmark_return
-
         vol_penalty = (portfolio_vol - benchmark_vol) * 0.5
         drawdown_penalty = (portfolio_drawdown - benchmark_drawdown) * 0.3
-
         fitness_score = excess_return - vol_penalty - drawdown_penalty
-
         return round(fitness_score, 2)
 
     def calculate_all_metrics(self):
-        # Combine all metrics
         risk_metrics = {}
-
-        # Basic metrics
         risk_metrics.update(self.calculate_basic_metrics())
-
-        # Volatility metrics
-        vol_metrics = self.calculate_volatility_metrics()
-        risk_metrics.update(vol_metrics)
-
-        # Risk-adjusted ratios
-        risk_ratios = self.calculate_risk_adjusted_ratios()
-        risk_metrics.update(risk_ratios)
-
-        # Drawdown metrics
-        dd_metrics = self.calculate_drawdown_metrics()
-        risk_metrics.update(dd_metrics)
-
-        # VaR/CVaR
-        var_metrics = self.calculate_var_cvar()
-        risk_metrics.update(var_metrics)
-
-        # Performance metrics
-        perf_metrics = self.calculate_performance_metrics()
-        risk_metrics.update(perf_metrics)
+        risk_metrics.update(self.calculate_volatility_metrics())
+        risk_metrics.update(self.calculate_risk_adjusted_ratios())
+        risk_metrics.update(self.calculate_drawdown_metrics())
+        risk_metrics.update(self.calculate_var_cvar())
+        risk_metrics.update(self.calculate_performance_metrics())
 
         return risk_metrics

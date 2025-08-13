@@ -56,10 +56,14 @@ async def get_available_symbols(user: JwtPayload = Depends(UserPayload)):
 
 
 @portfolio_router.get("/pnl/{portfolio_id}", dependencies=[Depends(auth_guard)])
-async def get_portfolios_by_id(
-    portfolio_id: str, user: JwtPayload = Depends(UserPayload)
+async def get_portfolio_pnl_by_id(
+    portfolio_id: str,
+    strategy: str = "LongOnly",
+    user: JwtPayload = Depends(UserPayload),
 ):
-    pnl = await PortfoliosService.get_portfolio_pnl(portfolio_id=portfolio_id)
+    pnl = await PortfoliosService.get_portfolio_pnl(
+        portfolio_id=portfolio_id, strategy=strategy
+    )
     response = SuccessResponse(
         http_code=200, status_code=200, message=MessageConsts.SUCCESS, data=pnl
     )
@@ -148,12 +152,14 @@ async def delete_portfolio(portfolio_id: str, user: JwtPayload = Depends(UserPay
     "/analysis/{broker_account_id}", dependencies=[Depends(auth_guard)]
 )
 async def get_portfolio_analysis(
-    broker_account_id: str, payload: AnalyzePortfolioDTO, user: JwtPayload = Depends(UserPayload)
+    broker_account_id: str,
+    payload: AnalyzePortfolioDTO,
+    user: JwtPayload = Depends(UserPayload),
 ):
     analysis_result = await PortfolioAnalysisService.analyze_portfolio(
         broker_account_id=broker_account_id,
         portfolio_id=payload.portfolio_id,
-        strategy_type=payload.strategy_type
+        strategy_type=payload.strategy_type,
     )
     response = SuccessResponse(
         http_code=200,

@@ -4,37 +4,40 @@ import pandas as pd
 from typing import Dict, List
 from frontend.utils.helpers import format_currency, safe_numeric_value
 
+
 def render_detailed_comparison(account_data, portfolio_data, strategy):
     """Render detailed comparison between account and portfolio"""
     st.subheader("📊 Detailed Comparison")
 
     # Create comparison tabs
-    comp_tab1, comp_tab2, comp_tab3 = st.tabs(
-        ["📋 Holdings Comparison", "📈 Performance", "💡 Recommendations"]
+    comp_tab1, comp_tab2 = st.tabs(
+        ["📋 Holdings Comparison", "💡 Recommendations"]
     )
 
     with comp_tab1:
         render_holdings_comparison(account_data, portfolio_data)
 
-    with comp_tab2:
-        render_performance_comparison(account_data, portfolio_data)
 
-    with comp_tab3:
+    with comp_tab2:
         render_rebalancing_recommendations(account_data, portfolio_data)
 
+    # with comp_tab2:
+    #     render_performance_comparison(account_data, portfolio_data)
 
 def render_holdings_comparison(account_data, portfolio_data):
 
     current_positions = account_data.get("current_positions", [])
+    target_positions = account_data.get("target_weights", [])
+
     display_current_positions(current_positions)
 
     st.markdown("#### 📋 Holdings Comparison")
-    current_symbols = {pos.get("symbol"): pos for pos in current_positions}
+    current_symbols = {pos["symbol"]: pos for pos in current_positions}
 
-    target_symbols = portfolio_data.get("metadata", {}).get("symbols", [])
+    target_symbols = {target["symbol"]: target for target in target_positions}
 
     comparison_data = []
-    all_symbols = set(current_symbols.keys()) | set(target_symbols)
+    all_symbols = set(current_symbols.keys()) | set(target_symbols.keys())
 
     for symbol in all_symbols:
         current_pos = current_symbols.get(symbol, {})
@@ -48,7 +51,7 @@ def render_holdings_comparison(account_data, portfolio_data):
             )
 
         in_target = symbol in target_symbols
-        target_weight = 100 / len(target_symbols) if in_target and target_symbols else 0
+        target_weight = target_symbols[symbol]["weight"] if in_target and target_symbols.get(symbol) else 0
 
         comparison_data.append(
             {
@@ -102,7 +105,8 @@ def render_rebalancing_recommendations(account_data, portfolio_data):
     st.markdown("#### 💡 Rebalancing Recommendations")
 
     current_positions = account_data.get("current_positions", [])
-    target_symbols = portfolio_data.get("metadata", {}).get("symbols", [])
+    target_positions = account_data.get("target_weights", [])
+    target_symbols = {target["symbol"]: target for target in target_positions}
 
     if not target_symbols:
         st.info("No target portfolio symbols available for recommendations.")
@@ -116,18 +120,10 @@ def render_rebalancing_recommendations(account_data, portfolio_data):
         st.warning("Cannot generate recommendations without valid account value.")
         return
 
-    st.success(f"� Based on your account value of {format_currency(total_value)}:")
-
-    # Equal weight allocation
-    target_weight_per_stock = 100 / len(target_symbols)
-    target_value_per_stock = total_value * (target_weight_per_stock / 100)
-
-    st.info(
-        f"🎯 Target allocation: {target_weight_per_stock:.2f}% per stock ({format_currency(target_value_per_stock)} each)"
-    )
+    st.success(f"� Based on your account value of {format_currency(total_value)}")
 
     # Show recommendations for each target symbol
-    for symbol in target_symbols:
+    for symbol, target in target_symbols.items():
         current_pos = next(
             (pos for pos in current_positions if pos.get("symbol") == symbol), None
         )
@@ -143,7 +139,8 @@ def render_rebalancing_recommendations(account_data, portfolio_data):
             )
             current_value = quantity * price
 
-        difference = target_value_per_stock - current_value
+        target_value = target.get("weight", 0) * total_value / 100
+        difference = target_value - current_value
 
         if (
             abs(difference) > total_value * 0.01
@@ -158,6 +155,7 @@ def render_rebalancing_recommendations(account_data, portfolio_data):
                 )
         else:
             st.write(f"✅ **{symbol}**: Current allocation is appropriate")
+
 
 def display_current_positions(positions: List[Dict]):
     """Display current portfolio positions"""
@@ -176,7 +174,6 @@ def display_current_positions(positions: List[Dict]):
     df_positions["cost_price"] = df_positions["cost_price"].apply(lambda x: safe_numeric_value(x, default=0))
     df_positions["break_even_price"] = df_positions["break_even_price"].apply(lambda x: safe_numeric_value(x, default=0))
     df_positions["market_value"] = df_positions["market_value"].apply(lambda x: safe_numeric_value(x, default=0))
-    df_positions["realized_profit"] = df_positions["realized_profit"].apply(lambda x: safe_numeric_value(x, default=0))
     df_positions["unrealized_profit"] = df_positions["unrealized_profit"].apply(lambda x: safe_numeric_value(x, default=0))
     df_positions["weight"] = df_positions["weight"].apply(lambda x: safe_numeric_value(x, default=0))
     df_positions["weight_over_sv"] = df_positions["weight_over_sv"].apply(lambda x: safe_numeric_value(x, default=0))
