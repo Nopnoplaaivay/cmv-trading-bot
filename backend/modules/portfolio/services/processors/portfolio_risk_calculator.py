@@ -13,9 +13,6 @@ class PortfolioRiskCalculator:
         self.risk_free_rate = 0
         self.df_pnl = df_pnl.iloc[-self.trading_days:].copy().reset_index(drop=True)
         self.daily_returns = df_pnl["pnl_pct"].pct_change(2).dropna()
-
-        LOGGER.info(f"{LOGGER_PREFIX} Daily Returns records: {len(self.daily_returns)}")
-        LOGGER.info(f"{LOGGER_PREFIX} Portfolio PnL info:\n {self.df_pnl.describe()}")
         
 
     def calculate_basic_metrics(self):
@@ -137,24 +134,17 @@ class PortfolioRiskCalculator:
         return drawdown_periods
 
     def calculate_var_cvar(self, confidence_level=0.05):
-        """
-        Tính Value at Risk và Conditional VaR
-        """
-        # Handle case where we don't have enough data
         if len(self.daily_returns) == 0:
             return {
                 f"var_{int((1-confidence_level)*100)}_daily_pct": 0.0,
                 f"cvar_{int((1-confidence_level)*100)}_daily_pct": 0.0,
             }
 
-        # VaR at confidence level (e.g., 95% = 0.05)
         var = np.percentile(self.daily_returns, confidence_level * 100)
 
-        # Handle NaN/inf cases
         if pd.isna(var) or np.isinf(var):
             var = 0.0
 
-        # CVaR (Expected Shortfall)
         tail_returns = self.daily_returns[self.daily_returns <= var]
         cvar = 0.0
         if len(tail_returns) > 0:
@@ -168,7 +158,6 @@ class PortfolioRiskCalculator:
         }
 
     def calculate_performance_metrics(self):
-        # Handle case where we don't have enough data
         if len(self.daily_returns) == 0:
             return {
                 "win_rate_pct": 0.0,
@@ -183,22 +172,19 @@ class PortfolioRiskCalculator:
         best_day = self.daily_returns.max()
         worst_day = self.daily_returns.min()
 
-        # Handle extreme values and NaN/inf cases
         if pd.isna(best_day) or np.isinf(best_day):
             best_day = 0.0
         if pd.isna(worst_day) or np.isinf(worst_day):
             worst_day = 0.0
 
-        # Cap extreme percentage values to reasonable limits
-        best_day_pct = min(best_day * 100, 1000)  # Cap at 1000%
-        worst_day_pct = max(worst_day * 100, -1000)  # Cap at -1000%
+        best_day_pct = min(best_day * 100, 1000) 
+        worst_day_pct = max(worst_day * 100, -1000)  
 
-        # Calculate skewness and kurtosis with error handling
         skewness = 0.0
         kurtosis = 0.0
 
         try:
-            if len(self.daily_returns) > 2:  # Need at least 3 points for skewness
+            if len(self.daily_returns) > 2:
                 skew_calc = stats.skew(self.daily_returns)
                 if not pd.isna(skew_calc) and not np.isinf(skew_calc):
                     skewness = skew_calc
@@ -207,7 +193,6 @@ class PortfolioRiskCalculator:
                 if not pd.isna(kurt_calc) and not np.isinf(kurt_calc):
                     kurtosis = kurt_calc
         except:
-            # If any error occurs, keep default values of 0
             pass
 
         return {

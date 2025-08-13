@@ -7,10 +7,12 @@ class CreateCustomPortfolioDTO(BaseDTO):
     portfolio_desc: str = ""
     symbols: List[str]
 
+
 class UpdatePortfolioDTO(BaseDTO):
-    portfolio_id: str 
+    portfolio_id: str
     symbols: List[str]
+
 
 class AnalyzePortfolioDTO(BaseDTO):
     portfolio_id: str
-    strategy_type: str = "market-neutral"
+    strategy_type: str = "MarketNeutral"

@@ -22,7 +22,7 @@ def render_portfolio_analysis_page():
     # Strategy selector - moved to top level to affect all tabs
     strategy = st.radio(
         "Select Strategy",
-        options=["long-only", "market-neutral"],
+        options=["LongOnly", "MarketNeutral"],
         index=0,
         horizontal=True,
         key="global_strategy_selector",
@@ -111,7 +111,6 @@ def render_portfolio_selector_for_analysis() -> Optional[str]:
     """Render portfolio selector for analysis"""
     personal_portfolios = PortfolioService.get_my_portfolios().get("portfolios")
     system_portfolios = PortfolioService.get_system_portfolios().get("portfolios")
-    print(system_portfolios)
     portfolios = personal_portfolios + system_portfolios
 
     if not personal_portfolios:
@@ -256,7 +255,7 @@ def render_performance_comparison_chart(portfolio_id: str):
     # Strategy selector
     strategy = st.radio(
         "Select Strategy",
-        options=["long-only", "market-neutral"],
+        options=["LongOnly", "MarketNeutral"],
         index=0,
         horizontal=True,
         key=f"strategy_selector_{portfolio_id}",
@@ -396,7 +395,7 @@ def create_comparison_chart(
     from_date = metadata.get("from_date", "N/A")
     to_date = metadata.get("to_date", "N/A")
     portfolio_name = metadata.get("portfolio_id", "Portfolio")
-    strategy = metadata.get("strategy", "long-only")
+    strategy = metadata.get("strategy", "LongOnly")
 
     fig.update_layout(
         title=f"Performance Comparison: {portfolio_name} vs VN-Index<br>"
@@ -445,7 +444,7 @@ def render_performance_metadata(metadata: dict):
         st.text_area("Stocks in Portfolio", symbols_text, height=100, disabled=True)
 
 
-def render_risk_metrics_real(portfolio_id: str, strategy: str = "long-only"):
+def render_risk_metrics_real(portfolio_id: str, strategy: str = "LongOnly"):
     """Render actual risk metrics from API response"""
     st.subheader("📊 Risk Metrics Analysis")
 
@@ -812,7 +811,7 @@ def render_detailed_risk_analysis_tab(portfolio_id: str):
     # Strategy selector
     strategy = st.radio(
         "Select Strategy for Detailed Analysis",
-        options=["long-only", "market-neutral"],
+        options=["LongOnly", "MarketNeutral"],
         index=0,
         horizontal=True,
         key="detailed_strategy_selector",

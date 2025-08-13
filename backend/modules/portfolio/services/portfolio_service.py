@@ -391,7 +391,9 @@ class PortfoliosService(BaseDailyService):
                     user_id=user.userId
                 )
                 if not portfolios_metadata:
-                    LOGGER.info(f"{LOGGER_PREFIX} No portfolio metadata found for user {user.userId}")
+                    LOGGER.info(
+                        f"{LOGGER_PREFIX} No portfolio metadata found for user {user.userId}"
+                    )
                     return {"portfolios": []}
                 unique_portfolio_ids = set(
                     metadata[PortfolioMetadata.portfolioId.name]
@@ -509,11 +511,16 @@ class PortfoliosService(BaseDailyService):
                     None,
                 )
 
-                latest_date = max(record[Portfolios.date.name] for record in portfolios_records)
+                latest_date = max(
+                    record[Portfolios.date.name] for record in portfolios_records
+                )
                 records = [
                     record
                     for record in portfolios_records
-                    if (record[Portfolios.portfolioId.name] == portfolio_id and record[Portfolios.date.name] == latest_date)
+                    if (
+                        record[Portfolios.portfolioId.name] == portfolio_id
+                        and record[Portfolios.date.name] == latest_date
+                    )
                 ]
                 if portfolio_metadata and len(records) > 0:
                     portfolios.append(
@@ -620,7 +627,7 @@ class PortfoliosService(BaseDailyService):
 
     @classmethod
     async def get_portfolio_pnl(
-        cls, portfolio_id: str, strategy: str = "long-only"
+        cls, portfolio_id: str, strategy: str = "LongOnly"
     ) -> Dict:
         try:
             with cls.repo.session_scope() as session:
@@ -667,7 +674,6 @@ class PortfoliosService(BaseDailyService):
                 symbols = list(
                     set([record[Portfolios.symbol.name] for record in portfolios])
                 )
-                print()
                 df_stock_pivoted = await PriceDataProvider(
                     prefix="STOCK"
                 ).get_market_data(from_date=from_date_str)
@@ -686,7 +692,7 @@ class PortfoliosService(BaseDailyService):
                     x_CEMV, x_CEMV_neutralized, _, _ = cls.portfolio_optimizer.optimize(
                         df_portfolio=window
                     )
-                    weights = x_CEMV if strategy == "long-only" else x_CEMV_neutralized
+                    weights = x_CEMV if strategy == "LongOnly" else x_CEMV_neutralized
 
                     for j in range(n_assets):
                         record = {
@@ -806,7 +812,9 @@ class PortfoliosService(BaseDailyService):
                         "portfolio": portfolio_risk_metrics,
                         "vnindex": index_risk_metrics,
                     },
-                    "portfolio": portfolio_pnl_df[["date", "pnl_pct"]].to_dict("records"),
+                    "portfolio": portfolio_pnl_df[["date", "pnl_pct"]].to_dict(
+                        "records"
+                    ),
                     "vnindex": index_pnl_df[["date", "pnl_pct"]].to_dict("records"),
                 }
 

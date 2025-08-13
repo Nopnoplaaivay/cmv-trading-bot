@@ -10,9 +10,6 @@ from ..utils.config import API_BASE_URL
 
 def login_user(username: str, password: str) -> Optional[Dict]:
     try:
-        print(
-            f"Attempting login... {username} {password}: {API_BASE_URL}/auth-service/login"
-        )
         response = requests.post(
             f"{API_BASE_URL}/auth-service/login",
             json={"account": username, "password": password},

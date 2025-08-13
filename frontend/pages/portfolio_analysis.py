@@ -43,13 +43,13 @@ def render_portfolio_vs_account_comparison():
     selected_portfolio_id = render_portfolio_selector_for_comparison()
 
     if not selected_portfolio_id:
-        st.info("Please select a portfolio to compare with your real account.")
+        st.info("💡 Select your own portfolio to compare with your real account.")
         return
 
     # Strategy selector
     strategy = st.radio(
         "Select Strategy for Portfolio Analysis",
-        options=["long-only", "market-neutral"],
+        options=["LongOnly", "MarketNeutral"],
         index=0,
         horizontal=True,
         key="comparison_strategy_selector",
@@ -61,9 +61,10 @@ def render_portfolio_vs_account_comparison():
         # Load real account data
         st.markdown("### 💼 Your Real Account")
         with st.spinner("📊 Loading account data..."):
-            account_data = PortfolioService.get_system_portfolio_analysis(
-                st.session_state.broker_account_id,
-                strategy,
+            account_data = PortfolioService.get_portfolio_analysis(
+                broker_account_id=st.session_state.broker_account_id,
+                portfolio_id=selected_portfolio_id,
+                strategy_type=strategy,
             )
 
         if account_data:
@@ -130,12 +131,8 @@ def display_account_summary(account_data):
     account_balance = account_data.get("account_balance", {})
 
     # Account metrics
-    st.metric(
-        "Net Asset Value", format_currency(account_balance.get("net_asset_value", 0))
-    )
-    st.metric(
-        "Available Cash", format_currency(account_balance.get("available_cash", 0))
-    )
+    st.metric("Net Asset Value", format_currency(account_balance.get("net_asset_value", 0)))
+    st.metric("Available Cash", format_currency(account_balance.get("available_cash", 0)))
     st.metric("Cash Ratio", f"{account_balance.get('cash_ratio', 0):.2%}")
 
     # Current positions

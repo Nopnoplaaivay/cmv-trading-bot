@@ -102,42 +102,45 @@ class PortfolioService:
             st.error(f"Network error: {str(e)}")
             return None
 
-    @staticmethod
-    @st.cache_data(ttl=30)  # Cache for 30 seconds
-    def get_system_portfolio_analysis(
-        broker_account_id: str, strategy_type: str = "market-neutral"
-    ) -> Optional[Dict]:
-        try:
-            response = requests.get(
-                f"{API_BASE_URL}/portfolio-service/analysis/{broker_account_id}",
-                headers=get_auth_headers(),
-                params={"strategy_type": strategy_type},
-                timeout=30,
-            )
+    # @staticmethod
+    # @st.cache_data(ttl=30)  # Cache for 30 seconds
+    # def get_system_portfolio_analysis(
+    #     broker_account_id: str, strategy_type: str = "MarketNeutral"
+    # ) -> Optional[Dict]:
+    #     try:
+    #         response = requests.get(
+    #             f"{API_BASE_URL}/portfolio-service/analysis/{broker_account_id}",
+    #             headers=get_auth_headers(),
+    #             params={"strategy_type": strategy_type},
+    #             timeout=30,
+    #         )
 
-            if response.status_code == 200:
-                return response.json().get("data")
-            elif handle_auth_error(response):
-                return None
-            else:
-                error_msg = response.json().get("message", "Unknown error")
-                st.error(f"Failed to get portfolio analysis: {error_msg}")
-                return None
+    #         if response.status_code == 200:
+    #             return response.json().get("data")
+    #         elif handle_auth_error(response):
+    #             return None
+    #         else:
+    #             error_msg = response.json().get("message", "Unknown error")
+    #             st.error(f"Failed to get portfolio analysis: {error_msg}")
+    #             return None
 
-        except requests.exceptions.RequestException as e:
-            st.error(f"API connection error: {str(e)}")
-            return None
+    #     except requests.exceptions.RequestException as e:
+    #         st.error(f"API connection error: {str(e)}")
+    #         return None
 
     @staticmethod
     @st.cache_data(ttl=30)
     def get_portfolio_analysis(
-        portfolio_id: str, strategy_type: str = "MarketNeutral"
+        broker_account_id: str, portfolio_id: str, strategy_type: str = "MarketNeutral"
     ) -> Optional[Dict]:
         """Get analysis for specific portfolio"""
         try:
-            response = requests.get(
-                f"{API_BASE_URL}/portfolio-service/{portfolio_id}/analysis",
-                params={"strategy_type": strategy_type},
+            response = requests.post(
+                f"{API_BASE_URL}/portfolio-service/analysis/{broker_account_id}",
+                json={
+                    "portfolio_id": portfolio_id,
+                    "strategy_type": strategy_type
+                },
                 headers=get_auth_headers(),
                 timeout=30,
             )
@@ -204,7 +207,7 @@ class PortfolioService:
     @staticmethod
     @st.cache_data(ttl=300)
     def get_portfolio_pnl(
-        portfolio_id: str, strategy: str = "long-only"
+        portfolio_id: str, strategy: str = "LongOnly"
     ) -> Optional[Dict]:
         """Get portfolio PnL data for comparison with VN-Index"""
         try:
