@@ -1,7 +1,3 @@
-"""
-Authentication service for CMV Trading Bot frontend
-"""
-
 import streamlit as st
 import requests
 from typing import Optional, Dict
@@ -22,6 +18,36 @@ def login_user(username: str, password: str) -> Optional[Dict]:
         else:
             error_msg = response.json().get("message", "Unknown error")
             st.error(f"Login failed: {error_msg}")
+            return None
+
+    except requests.exceptions.RequestException as e:
+        st.error(f"Connection error: {str(e)}")
+        return None
+
+
+def register_user(
+    username: str, password: str, confirm_password: str
+) -> Optional[Dict]:
+    """Register a new user account"""
+    try:
+        payload = {
+            "account": username,
+            "password": password,
+            "confirm_password": confirm_password,
+        }
+
+        response = requests.post(
+            f"{API_BASE_URL}/auth-service/register",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=10,
+        )
+
+        if response.status_code == 201:
+            return {"success": True, "message": "Account created successfully"}
+        else:
+            error_msg = response.json().get("message", "Registration failed")
+            st.error(f"Registration failed: {error_msg}")
             return None
 
     except requests.exceptions.RequestException as e:

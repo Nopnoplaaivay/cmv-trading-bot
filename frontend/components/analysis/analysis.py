@@ -59,7 +59,7 @@ def load_portfolio_data_cached(portfolio_id: str, strategy: str) -> Optional[Dic
     # Show cache status if exists
     if cache_key in st.session_state and cache_time_key in st.session_state:
         cache_time = st.session_state[cache_time_key]
-        st.info(f"📅 Using cached data from: {cache_time.strftime('%H:%M:%S')}")
+        # st.info(f"📅 Using cached data from: {cache_time.strftime('%H:%M:%S')}")
 
     # Load data if not cached or force refresh
     if cache_key not in st.session_state or st.button(

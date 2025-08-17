@@ -98,7 +98,12 @@ def render_system_status():
 def render_logout_button():
     st.divider()
 
-    if st.button("🚪 Logout", use_container_width=True, type="secondary"):
+    if st.button(
+        "🚪 Logout",
+        use_container_width=True,
+        type="secondary",
+        key="sidebar_logout_btn",
+    ):
         from ..services.auth import logout_user
 
         logout_payload = {
@@ -115,14 +120,16 @@ def render_logout_button():
 
 def render_portfolio_quick_stats():
     st.markdown("### 📊 Quick Stats")
-    
-    portfolios = PortfolioService.get_my_portfolios().get('portfolios')
-    
+
+    portfolios = PortfolioService.get_my_portfolios().get("portfolios")
+
     if portfolios:
         col1, col2 = st.columns(2)
         with col1:
             st.metric("My Portfolios", len(portfolios))
         with col2:
             for portfolio in portfolios:
-                portfolio_metadata = portfolio.get('metadata', {})
-                st.text(f"Portfolio: {portfolio_metadata.get('portfolioName', 'Unnamed Portfolio')}")
+                portfolio_metadata = portfolio.get("metadata", {})
+                st.text(
+                    f"Portfolio: {portfolio_metadata.get('portfolioName', 'Unnamed Portfolio')}"
+                )
