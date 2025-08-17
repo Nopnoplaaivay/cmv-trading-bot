@@ -88,7 +88,7 @@ def render_performance_comparison(account_data, portfolio_data):
         nav = account_balance.get("net_asset_value", 0)
         cash_ratio = account_balance.get("cash_ratio", 0)
         st.metric("Net Asset Value", format_currency(nav))
-        st.metric("Cash Ratio", f"{cash_ratio:.2%}")
+        st.metric("Cash Ratio", f"{cash_ratio}%")
 
     with col2:
         st.markdown("**Target Portfolio**")

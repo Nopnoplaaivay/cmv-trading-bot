@@ -78,7 +78,6 @@ def get_default_account() -> Optional[Dict]:
         if response.status_code == 200:
             return response.json().get("data")
         else:
-            st.error("Failed to fetch default account")
             return None
     except requests.exceptions.RequestException as e:
         st.error(f"Connection error: {str(e)}")
@@ -139,3 +138,5 @@ def handle_auth_error(response):
         # st.rerun() causes infinite loops
         return True
     return False
+
+

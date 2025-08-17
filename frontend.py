@@ -6,9 +6,10 @@ st.set_page_config(**STREAMLIT_CONFIG)
 
 from frontend.styles.main import MAIN_CSS
 from frontend.utils.helpers import init_session_state
-from frontend.components.auth import render_auth_page, render_user_info_sidebar
+from frontend.components.auth import render_user_info_sidebar
 from frontend.components.footer import render_footer
 from frontend.components.dashboard import render_dashboard
+from frontend.pages.auth import render_auth_page
 
 
 st.markdown(MAIN_CSS, unsafe_allow_html=True)

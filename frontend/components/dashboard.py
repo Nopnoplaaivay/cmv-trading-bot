@@ -1,6 +1,7 @@
 import streamlit as st
 
 from frontend.components.sidebar import render_sidebar
+from frontend.components.user_management import user_management_page
 from frontend.pages.portfolio_management import portfolio_management_page
 from frontend.pages.portfolio_analysis import portfolio_analysis_page
 from frontend.pages.trade_execution import trade_execution_page
@@ -30,3 +31,5 @@ def render_dashboard():
     #     order_history_page()
     elif st.session_state.current_page == "Account Management":
         account_management_page()
+    elif st.session_state.current_page == "User Management":
+        user_management_page()

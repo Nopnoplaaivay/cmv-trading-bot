@@ -9,7 +9,7 @@ def display_account_summary(account_data):
     # Account metrics
     st.metric("Net Asset Value", format_currency(account_balance.get("net_asset_value", 0)))
     st.metric("Available Cash", format_currency(account_balance.get("available_cash", 0)))
-    st.metric("Cash Ratio", f"{account_balance.get('cash_ratio', 0):.2%}")
+    st.metric("Cash Ratio", f"{account_balance.get('cash_ratio', 0):.2f}%")
 
     # Current positions
     current_positions = account_data.get("current_positions", [])

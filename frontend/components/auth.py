@@ -9,57 +9,6 @@ from backend.common.consts import CommonConsts
 from backend.utils.jwt_utils import JWTUtils
 
 
-def render_auth_page():
-    st.markdown(
-        '<div class="main-header"><h1>🔐 CMV Portfolio Management Website</h1><p>Professional Portfolio Management System</p></div>',
-        unsafe_allow_html=True,
-    )
-    init_session_state()
-    if st.session_state.get("authenticated", False):
-        st.success("✅ You are already logged in!")
-        if st.button("🚪 Logout", key="auth_logout_btn_1"):
-            logout_and_redirect()
-        return
-
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        with st.container():
-            if "auth_mode" not in st.session_state:
-                st.session_state.auth_mode = "login"
-
-            if st.session_state.auth_mode == "login":
-                render_login_form()
-            else:
-                render_register_form()
-
-            st.markdown("</div>", unsafe_allow_html=True)
-
-
-def render_auth_mode_toggle() -> str:
-    if "auth_mode" not in st.session_state:
-        st.session_state.auth_mode = "login"
-
-    # col1, col2 = st.columns(2)
-
-    # with col1:
-    #     if st.button(
-    #         "🔑 Login",
-    #         use_container_width=True,
-    #         type="primary" if st.session_state.auth_mode == "login" else "secondary",
-    #     ):
-    #         st.session_state.auth_mode = "login"
-
-    # with col2:
-    #     if st.button(
-    #         "📝 Register",
-    #         use_container_width=True,
-    #         type="primary" if st.session_state.auth_mode == "register" else "secondary",
-    #     ):
-    #         st.session_state.auth_mode = "register"
-
-    return st.session_state.auth_mode
-
-
 def render_login_form():
     st.markdown("### 🔑 Sign In to Your Account")
 
@@ -152,13 +101,11 @@ def handle_login(username: str, password: str):
         st.error("❌ Please fill in all required fields")
         return
 
-    # Show loading state
     with st.spinner("🔐 Authenticating..."):
-        time.sleep(0.5)  # Brief delay for UX
+        time.sleep(0.5) 
         auth_data = login_user(username, password)
 
     if auth_data:
-        # Store authentication data
         st.session_state.authenticated = True
         st.session_state.username = username
         st.session_state.auth_token = auth_data.get("accessToken")
@@ -174,16 +121,13 @@ def handle_login(username: str, password: str):
             st.session_state.session_id = decoded_payload.get("sessionId")
             st.session_state.role = decoded_payload.get("role")
 
-        # Set authenticated LAST to ensure all data is in place
         st.session_state.authenticated = True
 
-        # Initialize other required session state
         if "order_history" not in st.session_state:
             st.session_state.order_history = []
         if "selected_recommendations" not in st.session_state:
             st.session_state.selected_recommendations = []
 
-        # Fetch default account information
         with st.spinner("📊 Loading account information..."):
             from ..services.auth import get_default_account
 
@@ -195,12 +139,8 @@ def handle_login(username: str, password: str):
                 st.session_state.broker_name = (account_data.get("broker_name"))
                 st.session_state.broker_investor_id = (account_data.get("broker_investor_id"))
 
-
-
-        # Success feedback
         st.success("✅ Login successful! Redirecting...")
 
-        # Small delay before redirect
         time.sleep(1)
         st.rerun()
     else:
@@ -210,12 +150,8 @@ def handle_login(username: str, password: str):
 def handle_registration(
     username: str, password: str, confirm_password: str, terms_accepted: bool
 ):
-    """Handle registration with comprehensive validation"""
-
-    # Validation
     validation_errors = []
 
-    # Required fields
     if not username:
         validation_errors.append("Username is required")
     elif not validate_username(username):
@@ -236,27 +172,23 @@ def handle_registration(
     if not terms_accepted:
         validation_errors.append("You must accept the Terms of Service")
 
-    # Show validation errors
     if validation_errors:
         for error in validation_errors:
             st.error(f"❌ {error}")
         return
 
-    # Proceed with registration
     with st.spinner("📝 Creating your account..."):
-        time.sleep(0.5)  # Brief delay for UX
+        time.sleep(0.5)  
         register_data = register_user(username, password, confirm_password)
 
     if register_data:
         st.success("🎉 Account created successfully!")
         st.balloons()
 
-        # Show next steps
         st.info(
             "✨ **Welcome to CMV Portfolio Management App!** You can now sign in with your credentials."
         )
 
-        # Auto-switch to login mode
         st.session_state.auth_mode = "login"
         time.sleep(2)
         st.rerun()
@@ -265,15 +197,12 @@ def handle_registration(
 
 
 def validate_username(username: str) -> bool:
-    """Validate username format"""
     if len(username) < 3 or len(username) > 20:
         return False
     return re.match(r"^[a-zA-Z0-9_]+$", username) is not None
 
 
 def logout_and_redirect():
-    """Handle logout with proper cleanup"""
-    # Clear authentication state
     auth_keys = [
         "authenticated",
         "auth_token",
@@ -293,18 +222,13 @@ def logout_and_redirect():
 
 
 def render_user_info_sidebar():
-    """Render user info in sidebar when authenticated"""
     if st.session_state.get("authenticated", False):
         with st.sidebar:
             st.markdown("---")
             st.markdown("### 👤 Account Info")
 
             username = st.session_state.get("username", "Unknown")
-            role = st.session_state.get("user_role", "unknown")
+            role = st.session_state.get("role", "unknown")
 
             st.markdown(f"**Username:** {username}")
-
-            if st.button(
-                "🚪 Logout", use_container_width=True, key="auth_logout_btn_2"
-            ):
-                logout_and_redirect()
+            st.markdown(f"**Account Level:** {role.capitalize()}")

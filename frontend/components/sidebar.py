@@ -17,12 +17,19 @@ def render_sidebar():
             "Account Management",
         ]
 
+        # Add User Management for admin users
+        if st.session_state.get("role") == "admin":
+            pages.append("User Management")
+
+        # Get current page, but fallback to default if page not in available pages
+        current_page = st.session_state.get("current_page", "Portfolio Analysis")
+        if current_page not in pages:
+            current_page = "Portfolio Analysis"
+
         selected_page = st.selectbox(
             "Go to",
             pages,
-            index=pages.index(
-                st.session_state.get("current_page", "Portfolio Analysis")
-            ),
+            index=pages.index(current_page),
         )
         st.session_state.current_page = selected_page
 
