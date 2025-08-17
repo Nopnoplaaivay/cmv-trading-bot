@@ -1,45 +1,8 @@
 import streamlit as st
 import pandas as pd
 import time
-from typing import List, Dict, Optional
 
 from frontend.services.admin import AdminService
-from frontend.utils.helpers import format_currency, format_percentage
-
-
-def clear_user_management_cache():
-    if hasattr(AdminService.get_all_users, "clear"):
-        AdminService.get_all_users.clear()
-
-
-def user_management_page():
-    if not st.session_state.get("authenticated", False):
-        st.error("❌ Please login to access this page")
-        return
-
-    if st.session_state.get("role") != "admin":
-        st.error("❌ Access denied. This page is only accessible by administrators.")
-        return
-
-    st.title("👥 User Management")
-    st.markdown("---")
-
-    # Create tabs for different management functions
-    tab1, tab2, tab3, tab4 = st.tabs(
-        ["📋 All Users", "➕ Create User", "✏️ Edit User", "🗑️ Delete User"]
-    )
-
-    with tab1:
-        render_users_list()
-
-    with tab2:
-        render_create_user_form()
-
-    with tab3:
-        render_edit_user_form()
-
-    with tab4:
-        render_delete_user_form()
 
 
 def render_users_list():
@@ -65,29 +28,21 @@ def render_users_list():
         st.info("No users found in the system")
         return
 
-    # Display users in a table
     users_df = pd.DataFrame(users)
-
-    # Format the dataframe for better display
     if not users_df.empty:
-        # Rename columns for better display
         display_columns = {
             "id": "ID",
             "account": "Account",
             "role": "Role",
             "mobile": "Mobile",
             "email": "Email",
-            "createdAt": "Created At",
-            "updatedAt": "Updated At",
+            "__createdAt__": "Created At",
+            "__updatedAt__": "Updated At",
         }
 
-        # Select and rename columns that exist
-        available_columns = [
-            col for col in display_columns.keys() if col in users_df.columns
-        ]
+        available_columns = [col for col in display_columns.keys() if col in users_df.columns]
         display_df = users_df[available_columns].rename(columns=display_columns)
 
-        # Format datetime columns if they exist
         for col in ["Created At", "Updated At"]:
             if col in display_df.columns:
                 display_df[col] = pd.to_datetime(
@@ -96,7 +51,6 @@ def render_users_list():
 
         st.dataframe(display_df, use_container_width=True, hide_index=True)
 
-        # Show statistics
         st.markdown("#### 📊 User Statistics")
         col1, col2, col3, col4 = st.columns(4)
 

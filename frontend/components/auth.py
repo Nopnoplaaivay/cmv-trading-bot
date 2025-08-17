@@ -110,7 +110,7 @@ def handle_login(username: str, password: str):
         st.session_state.username = username
         st.session_state.auth_token = auth_data.get("accessToken")
         st.session_state.refresh_token = auth_data.get("refreshToken")
-        st.session_state.user_role = auth_data.get("role")
+        st.session_state.role = auth_data.get("role")
 
         decoded_payload = JWTUtils.decode_token(
             token=st.session_state.auth_token, secret_key=CommonConsts.AT_SECRET_KEY
@@ -202,24 +202,6 @@ def validate_username(username: str) -> bool:
     return re.match(r"^[a-zA-Z0-9_]+$", username) is not None
 
 
-def logout_and_redirect():
-    auth_keys = [
-        "authenticated",
-        "auth_token",
-        "refresh_token",
-        "username",
-        "user_role",
-        "remember_login",
-    ]
-
-    for key in auth_keys:
-        if key in st.session_state:
-            del st.session_state[key]
-
-    st.success("👋 Logged out successfully!")
-    time.sleep(1)
-    st.rerun()
-
 
 def render_user_info_sidebar():
     if st.session_state.get("authenticated", False):
@@ -231,4 +213,4 @@ def render_user_info_sidebar():
             role = st.session_state.get("role", "unknown")
 
             st.markdown(f"**Username:** {username}")
-            st.markdown(f"**Account Level:** {role.capitalize()}")
+            st.markdown(f"**Account Plan:** {role.capitalize()}")

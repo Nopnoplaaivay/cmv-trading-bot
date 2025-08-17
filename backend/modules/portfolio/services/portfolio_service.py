@@ -573,7 +573,6 @@ class PortfoliosService(BaseDailyService):
     async def get_available_symbols(cls) -> pd.DataFrame:
         try:
             df_stock_pivoted = await PriceDataProvider(prefix="STOCK").get_market_data()
-            # df_stock_pivoted = df_stock_pivoted.dropna(axis=1, how="all")
             if df_stock_pivoted.empty:
                 raise BaseExceptionResponse(
                     http_code=404,
@@ -660,23 +659,20 @@ class PortfoliosService(BaseDailyService):
                         errors=f"No portfolio found with id {portfolio_id}",
                     )
 
-                # Find the actual latest date from all records
+                session.commit()
                 latest_date = max(record[Portfolios.date.name] for record in portfolios)
-                # Filter to get only records with the latest date
                 portfolios = [
                     record
                     for record in portfolios
                     if record[Portfolios.date.name] == latest_date
                 ]
 
-                session.commit()
-
                 symbols = list(
                     set([record[Portfolios.symbol.name] for record in portfolios])
                 )
-                df_stock_pivoted = await PriceDataProvider(
-                    prefix="STOCK"
-                ).get_market_data(from_date=from_date_str)
+                df_stock_pivoted = await PriceDataProvider(prefix="STOCK").get_market_data(
+                    from_date=from_date_str
+                )
                 df_index = await PriceDataProvider(prefix="INDEX").get_market_data(
                     from_date=from_date_str
                 )

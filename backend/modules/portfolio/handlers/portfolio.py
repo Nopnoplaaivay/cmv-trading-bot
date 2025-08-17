@@ -18,7 +18,7 @@ from backend.modules.portfolio.dtos import (
     AnalyzePortfolioDTO,
 )
 from backend.modules.auth.decorators import UserPayload
-from backend.modules.auth.guards import auth_guard
+from backend.modules.auth.guards import auth_guard, premium_guard
 from backend.modules.auth.types import JwtPayload
 from backend.modules.notifications.telegram import MessageType
 
@@ -85,7 +85,7 @@ async def get_portfolios_by_id(
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
 
 
-@portfolio_router.post("/create", dependencies=[Depends(auth_guard)])
+@portfolio_router.post("/create", dependencies=[Depends(premium_guard)])
 async def create_custom_portfolio(
     payload: CreateCustomPortfolioDTO, user: JwtPayload = Depends(UserPayload)
 ):
@@ -106,7 +106,7 @@ async def create_custom_portfolio(
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
 
 
-@portfolio_router.put("/update", dependencies=[Depends(auth_guard)])
+@portfolio_router.put("/update", dependencies=[Depends(premium_guard)])
 async def update_portfolio(
     payload: UpdatePortfolioDTO, user: JwtPayload = Depends(UserPayload)
 ):
@@ -134,7 +134,7 @@ async def update_portfolio(
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
 
 
-@portfolio_router.delete("/{portfolio_id}", dependencies=[Depends(auth_guard)])
+@portfolio_router.delete("/{portfolio_id}", dependencies=[Depends(premium_guard)])
 async def delete_portfolio(portfolio_id: str, user: JwtPayload = Depends(UserPayload)):
     delete_result = await PortfoliosService.delete_portfolio(portfolio_id=portfolio_id)
 

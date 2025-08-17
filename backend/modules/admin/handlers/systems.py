@@ -13,13 +13,13 @@ from backend.modules.portfolio.services import (
     PortfolioNotificationService
 )
 from backend.modules.auth.decorators import UserPayload
-from backend.modules.auth.guards import auth_guard, admin_guard
+from backend.modules.auth.guards import admin_guard
 from backend.modules.auth.types import JwtPayload
 from backend.modules.admin.dtos import UpdateRoleDTO
 
 
 
-@admin_router.get("/update-balances", dependencies=[Depends(auth_guard), Depends(admin_guard)])
+@admin_router.get("/update-balances", dependencies=[Depends(admin_guard)])
 async def update_balances(user: JwtPayload = Depends(UserPayload)):
     success = await BalanceService.update_newest_balances_daily()
     response = SuccessResponse(
@@ -31,7 +31,7 @@ async def update_balances(user: JwtPayload = Depends(UserPayload)):
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
 
 
-@admin_router.get("/update-deals", dependencies=[Depends(auth_guard), Depends(admin_guard)])
+@admin_router.get("/update-deals", dependencies=[Depends(admin_guard)])
 async def update_deals(user: JwtPayload = Depends(UserPayload)):
     success = await DealsService.update_newest_deals_daily()
     response = SuccessResponse(
@@ -43,7 +43,7 @@ async def update_deals(user: JwtPayload = Depends(UserPayload)):
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
 
 
-@admin_router.post("/update-role", dependencies=[Depends(auth_guard), Depends(admin_guard)])
+@admin_router.post("/update-role", dependencies=[Depends(admin_guard)])
 async def update_user_role(payload: UpdateRoleDTO, user: JwtPayload = Depends(UserPayload)):
     updated_user = await AdminService.update_user_role(admin_user=user, payload=payload)
     response = SuccessResponse(
@@ -55,7 +55,7 @@ async def update_user_role(payload: UpdateRoleDTO, user: JwtPayload = Depends(Us
     return JSONResponse(status_code=response.http_code, content=response.to_dict())
 
 
-@admin_router.get("/send-system-notification", dependencies=[Depends(auth_guard), Depends(admin_guard)])
+@admin_router.get("/send-system-notification", dependencies=[Depends(admin_guard)])
 async def send_system_notification(user: JwtPayload = Depends(UserPayload)):
     try:
         notification_results = await PortfolioNotificationService.send_daily_system_portfolio()
@@ -76,7 +76,7 @@ async def send_system_notification(user: JwtPayload = Depends(UserPayload)):
         return JSONResponse(status_code=response.http_code, content=response.to_dict())
 
 
-@admin_router.get("/run-pipeline", dependencies=[Depends(auth_guard), Depends(admin_guard)])
+@admin_router.get("/run-pipeline", dependencies=[Depends(admin_guard)])
 async def run_daily_pipeline(user: JwtPayload = Depends(UserPayload)):
     try:
         pipeline_results = await DailyDataPipelineService.run_manual()

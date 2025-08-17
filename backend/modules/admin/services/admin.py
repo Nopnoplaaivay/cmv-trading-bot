@@ -20,86 +20,8 @@ class AdminService:
     async def get_all_users(cls):
         records = await UsersRepo.get_all()
         return records
-
-    # @classmethod
-    # async def update_user_role(
-    #     cls, admin_user: JwtPayload, payload: UpdateRoleDTO
-    # ) -> Dict[str, str]:
-    #     valid_roles = ["free", "premium", "admin"]
-    #     if payload.new_role not in valid_roles:
-    #         raise BaseExceptionResponse(
-    #             http_code=400,
-    #             status_code=400,
-    #             message=MessageConsts.BAD_REQUEST,
-    #             errors=f"Invalid role. Valid roles are: {', '.join(valid_roles)}",
-    #         )
-
-    #     target_users = await UsersRepo.get_by_condition(
-    #         {Users.account.name: payload.target_account}
-    #     )
-    #     if not target_users:
-    #         raise BaseExceptionResponse(
-    #             http_code=404,
-    #             status_code=404,
-    #             message=MessageConsts.NOT_FOUND,
-    #             errors="Target user not found",
-    #         )
-
-    #     target_user = target_users[0]
-
-    #     if (
-    #         target_user[Users.id.name] == admin_user.userId
-    #         and payload.new_role != "admin"
-    #     ):
-    #         raise BaseExceptionResponse(
-    #             http_code=400,
-    #             status_code=400,
-    #             message=MessageConsts.BAD_REQUEST,
-    #             errors="Admin cannot demote their own account",
-    #         )
-
-    #     await UsersRepo.update(
-    #         record={
-    #             Users.id.name: target_user[Users.id.name],
-    #             Users.account.name: payload.target_account,
-    #             Users.role.name: payload.new_role,
-    #         },
-    #         identity_columns=[Users.id.name],
-    #         returning=False,
-    #         text_clauses={"__updatedAt__": TextSQL(SQLServerConsts.GMT_7_NOW_VARCHAR)},
-    #     )
-
-    #     target_user_sessions = await SessionsRepo.get_by_condition(
-    #         {Sessions.userId.name: target_user[Users.id.name]}
-    #     )
-    #     if len(target_user_sessions) > 0:
-    #         sessions = [
-    #             {
-    #                 Sessions.id.name: session[Sessions.id.name],
-    #                 Sessions.role.name: payload.new_role,
-    #             }
-    #             for session in target_user_sessions
-    #         ]
-    #         await SessionsRepo.update_many(
-    #             records=sessions,
-    #             identity_columns=[Sessions.id.name],
-    #             returning=False,
-    #             text_clauses={
-    #                 "__updatedAt__": TextSQL(SQLServerConsts.GMT_7_NOW_VARCHAR)
-    #             },
-    #         )
-
-    #     LOGGER.info(
-    #         f"Admin {admin_user.userId} updated user {payload.target_account} role to {payload.new_role}"
-    #     )
-
-    #     return {
-    #         "message": f"Successfully updated {payload.target_account} role to {payload.new_role}",
-    #         "target_account": payload.target_account,
-    #         "new_role": payload.new_role,
-    #         "updated_by": admin_user.userId,
-    #     }
-
+    
+    
     @classmethod
     async def create_user(
         cls, admin_user: JwtPayload, payload: CreateUserDTO
@@ -260,9 +182,7 @@ class AdminService:
         if payload.new_email:
             updated_fields.append("email")
 
-        LOGGER.info(
-            f"Admin {admin_user.userId} updated user {payload.target_account}: {', '.join(updated_fields)}"
-        )
+
 
         return {
             "message": f"Successfully updated user {payload.target_account}",

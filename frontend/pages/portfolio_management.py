@@ -7,9 +7,15 @@ from frontend.components.management import (
 
 
 def portfolio_management_page():
-    """Main portfolio management page"""
-    st.subheader("📊 Portfolio Management")
+    if not st.session_state.get("authenticated", False):
+        st.error("❌ Please login to access this page")
+        return
 
+    if st.session_state.get("role") not in ["admin", "premium"]:
+        st.error("❌ Access denied. This page is only accessible by premium users.")
+        return
+
+    st.subheader("📊 Portfolio Management")
     tab1, tab2 = st.tabs(["📋 My Portfolios", "➕ Create New"])
 
     with tab1:

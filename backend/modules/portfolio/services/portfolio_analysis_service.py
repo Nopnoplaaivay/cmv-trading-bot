@@ -95,11 +95,9 @@ class PortfolioAnalysisService:
                     if not portfolio_data:
                         return None
 
-                    # Get target weights based on strategy: long only or market neutral
                     strategy = StrategyFactory.create_strategy(strategy_type)
                     target_weights = strategy.get_target_weights(portfolio_data)
 
-                    # Generate recommendations
                     recommendations = (
                         cls.recommendation_engine.generate_recommendations(
                             current_positions=current_positions,

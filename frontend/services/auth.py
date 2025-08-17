@@ -86,30 +86,10 @@ def get_default_account() -> Optional[Dict]:
 
 def get_auth_headers() -> Dict[str, str]:
     headers = {"Content-Type": "application/json"}
-    debug_mode = st.session_state.get("debug_mode", False)
 
     if "auth_token" in st.session_state and st.session_state.auth_token:
         token = st.session_state.auth_token
-        # Debug: Show token info in sidebar (first/last 10 chars only for security)
-        if debug_mode:
-            if len(token) > 20:
-                st.sidebar.caption(f"🔑 Token: {token[:10]}...{token[-10:]}")
-            else:
-                st.sidebar.caption(f"🔑 Token: {token}")
         headers["Authorization"] = f"Bearer {token}"
-    else:
-        if debug_mode:
-            st.sidebar.caption("❌ No valid token found")
-            # Debug: Show what auth-related keys exist
-            auth_keys = [
-                k
-                for k in st.session_state.keys()
-                if "auth" in k.lower() or k in ["authenticated", "username"]
-            ]
-            if auth_keys:
-                st.sidebar.caption(f"🔍 Auth keys: {auth_keys}")
-            else:
-                st.sidebar.caption("🔍 No auth keys found at all")
     return headers
 
 

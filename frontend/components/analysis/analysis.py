@@ -107,9 +107,14 @@ def render_portfolio_selector_for_analysis() -> Optional[str]:
     portfolios = personal_portfolios + system_portfolios
 
     if not personal_portfolios:
-        st.sidebar.info(
-            "💡 You can analyze the System Portfolio or create your first custom portfolio!"
-        )
+        if st.session_state.get("role") == "free":
+            st.sidebar.info(
+                "💡 You can subscribe to Premium Plan to create your first custom portfolio!"
+            )
+        elif st.session_state.get("role") == "premium":
+            st.sidebar.info(
+                "💡 You can create your first custom portfolio in Portfolio Management page!"
+            )
 
     # Create portfolio options
     portfolio_options = {}

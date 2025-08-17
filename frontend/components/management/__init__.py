@@ -1,3 +1,2 @@
 from .portfolio_list import render_portfolio_list
 from .portfolio_create import render_create_portfolio_form
-from .portfolio_selector import render_portfolio_selector

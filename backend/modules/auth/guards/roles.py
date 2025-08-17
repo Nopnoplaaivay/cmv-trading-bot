@@ -29,6 +29,7 @@ class RoleGuard:
                 message="Unauthorized",
                 errors="Missing or invalid token"
             )
+        
         if user.role != required_role:
             raise BaseExceptionResponse(
                 http_code=403,
@@ -51,3 +52,6 @@ class RoleGuard:
     
 async def admin_guard(request: Request):
     return await RoleGuard.activate(request, required_role="admin")
+
+async def premium_guard(request: Request):
+    return await RoleGuard.activate(request, required_role="premium")

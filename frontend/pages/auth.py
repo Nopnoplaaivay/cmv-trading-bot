@@ -2,7 +2,7 @@
 import streamlit as st
 
 from frontend.utils.helpers import init_session_state
-from frontend.components.auth import render_login_form, render_register_form, logout_and_redirect
+from frontend.components.auth import render_login_form, render_register_form
 
 
 def render_auth_page():
@@ -13,9 +13,6 @@ def render_auth_page():
     init_session_state()
     if st.session_state.get("authenticated", False):
         st.success("✅ You are already logged in!")
-        if st.button("🚪 Logout", key="auth_logout_btn_1"):
-            logout_and_redirect()
-        return
 
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
