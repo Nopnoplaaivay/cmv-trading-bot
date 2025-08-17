@@ -35,19 +35,6 @@ def render_sidebar():
             st.markdown("### ⚙️ Account Settings")
             st.text(f"Your Broker Account ID: {st.session_state.broker_account_id}")
 
-        # # Strategy Selection
-        # strategy_type = st.selectbox(
-        #     "📊 Trading Strategy",
-        #     ["MarketNeutral", "LongOnly"],
-        #     index=(
-        #         0
-        #         if st.session_state.get("strategy_type", "MarketNeutral")
-        #         == "MarketNeutral"
-        #         else 1
-        #     ),
-        # )
-        # st.session_state.strategy_type = strategy_type
-
         st.divider()
         if selected_page == "Portfolio Analysis":
             render_portfolio_quick_stats()
