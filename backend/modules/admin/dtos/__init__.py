@@ -1,1 +1,5 @@
-from .admin import UpdateRoleDTO
+from .admin import (
+    UpdateRoleDTO,
+    CreateUserDTO,
+    UpdateUserInfoDTO
+)

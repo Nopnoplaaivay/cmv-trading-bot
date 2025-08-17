@@ -18,17 +18,6 @@ from backend.modules.auth.types import JwtPayload
 from backend.modules.admin.dtos import UpdateRoleDTO
 
 
-@admin_router.get("/get-users", dependencies=[Depends(auth_guard), Depends(admin_guard)])
-async def get_users(user: JwtPayload = Depends(UserPayload)):
-    users = await AdminService.get_all_users()
-    response = SuccessResponse(
-        http_code=200,
-        status_code=200,
-        message=MessageConsts.SUCCESS,
-        data=users,
-    )
-    return JSONResponse(status_code=response.http_code, content=response.to_dict())
-
 
 @admin_router.get("/update-balances", dependencies=[Depends(auth_guard), Depends(admin_guard)])
 async def update_balances(user: JwtPayload = Depends(UserPayload)):

@@ -781,7 +781,6 @@ def render_risk_return_chart(portfolio_metrics: dict, vnindex_metrics: dict):
 
 
 def render_detailed_risk_analysis_tab(portfolio_id: str):
-    """Wrapper function for detailed risk analysis tab"""
     st.subheader("📈 Detailed Analysis")
 
     # Strategy selector
