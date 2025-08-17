@@ -36,7 +36,7 @@ RUN pip install -r requirements.txt
 ADD ./.streamlit .streamlit
 ADD ./backend ./backend
 ADD ./frontend ./frontend
-ADD ./pages ./pages
+
 # Run server
 COPY ./frontend.py ./frontend.py
 ENTRYPOINT ["streamlit", "run", "frontend.py"]
