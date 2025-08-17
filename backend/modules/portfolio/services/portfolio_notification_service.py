@@ -4,6 +4,7 @@ from backend.modules.portfolio.services.data_providers import PortfolioDataProvi
 from backend.modules.portfolio.services.portfolio_analysis_service import (
     PortfolioAnalysisService,
 )
+from backend.modules.portfolio.utils.portfolio_utils import PortfolioUtils
 from backend.modules.portfolio.infrastructure import (
     TradingCalendarService,
     PortfolioReportGenerator,
@@ -35,13 +36,6 @@ class PortfolioNotificationService:
                     errors=None,
                 )
 
-            next_trading_date_str = next_trading_date.strftime(
-                SQLServerConsts.DATE_FORMAT
-            )
-            last_trading_date_str = last_trading_date.strftime(
-                SQLServerConsts.DATE_FORMAT
-            )
-
             # Initialize notification service
             if not notification_service.is_ready():
                 await notification_service.initialize()
@@ -55,10 +49,10 @@ class PortfolioNotificationService:
                     errors=None,
                 )
 
-            # Get portfolio data
+            portfolio_id = PortfolioUtils.generate_general_portfolio_id()
             portfolio_data = (
                 await cls.portfolio_data_provider.get_portfolio_weights_by_id(
-                    last_trading_date_str, next_trading_date_str
+                    portfolio_id=portfolio_id
                 )
             )
 

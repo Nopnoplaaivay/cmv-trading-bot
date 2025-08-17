@@ -3,7 +3,6 @@ from frontend.utils.helpers import format_currency
 
 
 def display_account_summary(account_data):
-    """Display real account summary"""
     account_balance = account_data.get("account_balance", {})
 
     # Account metrics

@@ -23,7 +23,6 @@ class TradingCalendarService:
     
     @classmethod
     def get_last_next_trading_dates(cls) -> tuple[datetime, datetime]:
-
         current_date = TimeUtils.get_current_vn_time()
 
         if not cls.is_trading_day(current_date):

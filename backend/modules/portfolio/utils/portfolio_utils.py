@@ -1,11 +1,18 @@
-from typing import Dict, Any, Optional, Union
 import re
+import datetime
+from typing import Dict, Any, Optional, Union
+
+from backend.common.consts import SQLServerConsts
+from backend.modules.portfolio.infrastructure import TradingCalendarService
 
 
 class PortfolioUtils:
     @staticmethod
-    def generate_general_portfolio_id(date: str) -> str:
-        year_month = date[:7]  # "2024-12"
+    def generate_general_portfolio_id(date: str = None) -> str:
+        if not date:
+            last_trading_date, _ = TradingCalendarService.get_last_next_trading_dates()
+            date = last_trading_date.strftime(SQLServerConsts.DATE_FORMAT)
+        year_month = date[:7]
         return f"SYSTEM-{year_month}"
     
     @staticmethod 
